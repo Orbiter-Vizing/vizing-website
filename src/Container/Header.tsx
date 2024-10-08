@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Logo from "@/assets/images/footerLogo.svg";
 import { cn } from "@/lib/utils";
 import styles from "./header.style.module.css";
@@ -71,7 +65,6 @@ const Header = ({ lang }: ConLangParams) => {
         return <span onClick={() => openLink(item.jumpLink)}>{item.text}</span>;
         break;
       case HeaderItemType.CATEGORY:
-        console.log("render category", item.text);
         return (
           <PopoverComponent trigger={item.text}>
             <div className="px-[24px] py-[16px]">
@@ -178,35 +171,14 @@ const Header = ({ lang }: ConLangParams) => {
     return (
       <div className="flex flex-row items-center py-[12px] px-[16px] justify-between bg-[rgba(255,255,255,0.1)] rounded-[12px]">
         <span className="inline-block w-[24px] h-[24px] mr-[8px] bg-[rgba(255,255,255,0.1)] rounded-full"></span>
-        <p className="inline-block text-white text-base font-semibold mr-[8px]">
-          0x23c234..8hyg
-        </p>
+        <p className="inline-block text-white text-base font-semibold mr-[8px]">0x23c234..8hyg</p>
         <span className="inline-block">⬇️</span>
       </div>
     );
   };
 
-  // const iconList = [
-  //   {
-  //     icon: headerX,
-  //     jumpLink: externalURLs.twitter,
-  //   },
-  //   {
-  //     icon: headerDisc,
-  //     jumpLink: externalURLs.discord,
-  //   },
-  //   {
-  //     icon: headerMedium,
-  //     jumpLink: externalURLs.medium,
-  //   },
-  // ];
-
   return (
-    <header
-      className={
-        "h-20 flex items-center justify-between header-center relative z-[999999]"
-      }
-    >
+    <header className={"h-20 flex items-center justify-between header-center relative z-[999999]"}>
       <Logo className={"h-10 w-auto cursor-pointer"} />
       <ul
         className={
@@ -219,7 +191,7 @@ const Header = ({ lang }: ConLangParams) => {
               key={index}
               className={cn(
                 "relative cursor-pointer",
-                pathname === item.jumpLink ? styles.textSelected : ""
+                pathname === item.jumpLink ? styles.textSelected : "",
               )}
             >
               {renderHeaderItem(item)}
@@ -242,7 +214,9 @@ const Header = ({ lang }: ConLangParams) => {
               </div>
             </div>
             <div className="w-full h-[112px] bg-[#302D2E] p-[16px] flex flex-col justify-between rounded-[12px]">
-              <div className="text-white text-[14px] font-[500] opacity-60 rounded-md">2/21 Tickets</div>
+              <div className="text-white text-[14px] font-[500] opacity-60 rounded-md">
+                2/21 Tickets
+              </div>
               <div className="text-white text-[14px] opacity-60 rounded-md">to earn big prize</div>
               <div className="bg-[#595758] w-full h-[20px] rounded-[4px]">
                 <div className="bg-[#FF486D] h-full w-[60px] rounded-[4px]"></div>

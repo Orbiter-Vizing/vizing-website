@@ -1,0 +1,43 @@
+.bannerWrap {
+  border-bottom: 1px solid rgba(255, 255, 255, .12)
+}
+
+.activated {
+  opacity: 1;
+}
+
+.currentTab {
+  color: #FF486D;
+}
+
+.passedPeriod {
+  border-color: #FF486D;
+  color: #ffffff;
+}
+
+.authCodeContainer {
+  margin-top: 54px;
+  margin-bottom: 82px;
+}
+
+.authCodeInput {
+  height: 72px;
+  width: 69px;
+  background: #302D2E;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  margin-right: 23px;
+  padding: 21px;
+  text-align: center;
+  line-height: 72px;
+}
+
+.authCodeInput:last-child {
+  margin-right: 0;
+}
+
+.authCodeInput:focus {
+  border-color: #ffffff;
+  outline: none;
+}
+
