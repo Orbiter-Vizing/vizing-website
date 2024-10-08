@@ -10,7 +10,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Vizing",
-  description: "Vizing, an omni interoperability environment built on advanced zk technology, provides a faster, more affordable, and safer Ethereum ecosystem roaming experience!",
+  description:
+    "Vizing, an omni interoperability environment built on advanced zk technology, provides a faster, more affordable, and safer Ethereum ecosystem roaming experience!",
 };
 
 export default function RootLayout({
@@ -24,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={clsx(inter.className, "bg-black")}>
+      <body className={clsx(inter.className, "px-[80px] bg-black")}>
         <Header lang={lang} />
         <main className="min-h-screen flex-col pb-24">{children}</main>
         <Footer />

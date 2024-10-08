@@ -78,7 +78,7 @@
 
 @layer components {
   .header-center {
-    @apply p-4 mx-auto;
+    @apply mx-auto;
     max-width: 1360px;
   }
 
