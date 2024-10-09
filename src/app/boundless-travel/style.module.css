@@ -6,3 +6,7 @@
   width: 37%;
   height: 37vw;
 }
+
+.selectedSidebarItem {
+  color: #ffffff;
+}

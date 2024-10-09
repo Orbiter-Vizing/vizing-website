@@ -141,7 +141,7 @@ const Header = ({ lang }: ConLangParams) => {
       },
       {
         type: HeaderItemType.CATEGORY,
-        text: "Communit",
+        text: "Community",
         jumpLink: "",
         children: [
           {

@@ -1,0 +1,7 @@
+.protocolActivityWrap {
+  width: calc(50% - 10px);
+}
+
+.selectedChain {
+  border-color: #FF486D;
+}

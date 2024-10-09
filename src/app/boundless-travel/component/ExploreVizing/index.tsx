@@ -38,7 +38,7 @@ export default function ExploreVizing() {
 
   return (
     <div className="w-full">
-      <h1 className="mt-[64px] mb-[56px] text-white text-[48px] font-medium">Explore Vizing</h1>
+      <h1 className="mb-[56px] text-white text-[48px] font-medium">Explore Vizing</h1>
       <div className="flex flex-col p-[44px] mb-[24px] border border-[1px] border-[rgba(255,255,255,0.12)] rounded-[24px] bg-[rgba(242,63,93,0.06)]">
         <p className="mb-[24px] text-[20px] text-white font-medium leading-[30px]">
           Vizing is a cross-chain interoperability environment based on advanced zk technology and
