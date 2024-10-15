@@ -1,0 +1,12 @@
+.circle {
+  border-radius: 999px;
+  filter: blur(250px);
+  background: rgba(255, 72, 109, 0.7);
+  opacity: 0.4;
+  width: 37%;
+  height: 37vw;
+}
+
+.selectedSidebarItem {
+  color: #ffffff;
+}

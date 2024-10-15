@@ -2,81 +2,93 @@
 
 import { clsx } from "clsx";
 import styles from "./style.module.css";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import WelcomePeriod from "@/app/boundless-travel/component/WelcomePeriod/index";
 import ExploreVizing from "@/app/boundless-travel/component/ExploreVizing/index";
 import VPass from "@/app/boundless-travel/component/VPass/index";
+import BoundlessTravelContent from "@/app/boundless-travel/component/Travel/index";
+// atom
+import { useAtom } from "jotai";
+import { accountTravelInfoAtom, combinedTravelInfoAtom } from "@/atoms/accountAtom";
 // assets
 import IconDropsown from "@/assets/images/icon/dropdown.svg";
 
-enum SidebarItem {
-  EXPLOREVIZING = "exploreVizing",
-  VPASS = "vPass",
-  BOUNDLESSTRAVEL = "boundlessTravel",
-  BRIDGETRAVEL = "bridgeTravel",
-  DEFITRAVEL = "defiTravel",
-  GAMINGTRAVEL = "gamingTravel",
-  NFTTRAVEL = "nftTravel",
-  UNLOCKTICKETNNFT = "unlockTicketNft",
-}
+// enum SidebarItem {
+//   EXPLOREVIZING = "exploreVizing",
+//   VPASS = "vPass",
+//   BOUNDLESSTRAVEL = "boundlessTravel",
+//   BRIDGETRAVEL = "bridgeTravel",
+//   DEFITRAVEL = "defiTravel",
+//   GAMINGTRAVEL = "gamingTravel",
+//   NFTTRAVEL = "nftTravel",
+//   UNLOCKTICKETNNFT = "unlockTicketNft",
+// }
 
 export default function BoundlessTravel() {
-  const [currentSidebarItem, setCurrentSidebarItem] = useState(SidebarItem.EXPLOREVIZING);
+  // const [currentSidebarItem, setCurrentSidebarItem] = useState(SidebarItem.EXPLOREVIZING);
+  const [accountTravelInfo] = useAtom(accountTravelInfoAtom);
+  const [combindedTravelInfo, setCombindedTravelInfo] = useAtom(combinedTravelInfoAtom);
 
-  const sidebarList = useMemo(() => {
-    return [
-      {
-        id: SidebarItem.EXPLOREVIZING,
-        text: "Explore Vizing",
-        children: [],
-      },
-      {
-        id: SidebarItem.VPASS,
-        text: "vPass",
-        children: [],
-      },
-      {
-        id: SidebarItem.BOUNDLESSTRAVEL,
-        text: "Boundless Travel",
-        children: [
-          {
-            id: SidebarItem.BRIDGETRAVEL,
-            text: "Bridge Travel",
-            children: [],
-          },
-          {
-            id: SidebarItem.DEFITRAVEL,
-            text: "DeFi Travel",
-            children: [],
-          },
-          {
-            id: SidebarItem.GAMINGTRAVEL,
-            text: "Gaming Travel",
-            children: [],
-          },
-          {
-            id: SidebarItem.NFTTRAVEL,
-            text: "NFT Travel",
-            children: [],
-          },
-        ],
-      },
-      {
-        id: SidebarItem.UNLOCKTICKETNNFT,
-        text: "Unlock Ticket NFT",
-        children: [],
-      },
-    ];
+  // const sidebarList = useMemo(() => {
+  //   return [
+  //     {
+  //       id: SidebarItem.EXPLOREVIZING,
+  //       text: "Explore Vizing",
+  //       children: [],
+  //     },
+  //     {
+  //       id: SidebarItem.VPASS,
+  //       text: "vPass",
+  //       children: [],
+  //     },
+  //     {
+  //       id: SidebarItem.BOUNDLESSTRAVEL,
+  //       text: "Boundless Travel",
+  //       children: [
+  //         {
+  //           id: SidebarItem.BRIDGETRAVEL,
+  //           text: "Bridge Travel",
+  //           children: [],
+  //         },
+  //         {
+  //           id: SidebarItem.DEFITRAVEL,
+  //           text: "DeFi Travel",
+  //           children: [],
+  //         },
+  //         {
+  //           id: SidebarItem.GAMINGTRAVEL,
+  //           text: "Gaming Travel",
+  //           children: [],
+  //         },
+  //         {
+  //           id: SidebarItem.NFTTRAVEL,
+  //           text: "NFT Travel",
+  //           children: [],
+  //         },
+  //       ],
+  //     },
+  //     {
+  //       id: SidebarItem.UNLOCKTICKETNNFT,
+  //       text: "Unlock Ticket NFT",
+  //       children: [],
+  //     },
+  //   ];
+  // }, []);
+
+  // const handleSidebarItemClick = (sidebarItem: SidebarItem) => {
+  //   setCurrentSidebarItem(sidebarItem);
+  // };
+  useEffect(() => {
+    console.log("enter boundless travel");
+    return () => {
+      console.log("leave boundless travel");
+    };
   }, []);
-
-  const handleSidebarItemClick = (sidebarItem: SidebarItem) => {
-    setCurrentSidebarItem(sidebarItem);
-  };
 
   return (
     <div className="w-full mt-[64px]">
-      {/* <WelcomePeriod /> */}
-      <div className="relative w-full pl-[272px]">
+      {combindedTravelInfo.isWelcomeViewed ? <BoundlessTravelContent /> : <WelcomePeriod />}
+      {/* <div className="relative w-full pl-[272px]">
         <div className="w-[181px] h-[456px] px-[16px] py-[32px] absolute top-0 left-0">
           {sidebarList.map((sidebarItem) => {
             return (
@@ -98,7 +110,7 @@ export default function BoundlessTravel() {
         </div>
         {currentSidebarItem === SidebarItem.EXPLOREVIZING && <ExploreVizing />}
         {currentSidebarItem === SidebarItem.VPASS && <VPass />}
-      </div>
+      </div> */}
     </div>
   );
 }

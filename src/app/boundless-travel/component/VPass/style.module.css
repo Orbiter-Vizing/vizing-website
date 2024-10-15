@@ -5,3 +5,7 @@
 .selectedChain {
   border-color: #FF486D;
 }
+
+.chainWithBalance {
+  background-color: rgba(255,72,109,0.3);
+}
