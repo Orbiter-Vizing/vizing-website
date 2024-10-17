@@ -36,37 +36,37 @@ export default function BoundlessTravelContent() {
         text: "vPass",
         children: [],
       },
-      {
-        id: SidebarItem.BOUNDLESSTRAVEL,
-        text: "Boundless Travel",
-        children: [
-          {
-            id: SidebarItem.BRIDGETRAVEL,
-            text: "Bridge Travel",
-            children: [],
-          },
-          {
-            id: SidebarItem.DEFITRAVEL,
-            text: "DeFi Travel",
-            children: [],
-          },
-          {
-            id: SidebarItem.GAMINGTRAVEL,
-            text: "Gaming Travel",
-            children: [],
-          },
-          {
-            id: SidebarItem.NFTTRAVEL,
-            text: "NFT Travel",
-            children: [],
-          },
-        ],
-      },
-      {
-        id: SidebarItem.UNLOCKTICKETNNFT,
-        text: "Unlock Ticket NFT",
-        children: [],
-      },
+      // {
+      //   id: SidebarItem.BOUNDLESSTRAVEL,
+      //   text: "Boundless Travel",
+      //   children: [
+      //     {
+      //       id: SidebarItem.BRIDGETRAVEL,
+      //       text: "Bridge Travel",
+      //       children: [],
+      //     },
+      //     {
+      //       id: SidebarItem.DEFITRAVEL,
+      //       text: "DeFi Travel",
+      //       children: [],
+      //     },
+      //     {
+      //       id: SidebarItem.GAMINGTRAVEL,
+      //       text: "Gaming Travel",
+      //       children: [],
+      //     },
+      //     {
+      //       id: SidebarItem.NFTTRAVEL,
+      //       text: "NFT Travel",
+      //       children: [],
+      //     },
+      //   ],
+      // },
+      // {
+      //   id: SidebarItem.UNLOCKTICKETNNFT,
+      //   text: "Unlock Ticket NFT",
+      //   children: [],
+      // },
     ];
   }, []);
 
