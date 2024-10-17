@@ -21,6 +21,7 @@ import { currentHeaderTab } from "@/atoms/uiAtom";
 import IconCaretDown from "@/assets/images/icon/avatar-caret-down.svg";
 import IconLogout from "@/assets/images/icon/logout.svg";
 import IconLink from "@/assets/images/icon/link.svg";
+import clsx from "clsx";
 
 export enum HeaderItemType {
   INTERNALLINK = "internalLink",
@@ -58,15 +59,11 @@ const Header = ({ lang }: ConLangParams) => {
   const [accountAddress, setAccountAddress] = useAtom<string | null>(accountAddressAtom);
   const [currentTab, setCurrentTab] = useAtom(currentHeaderTab);
   const [combindedTravelInfo, setCombindedTravelInfo] = useAtom(combinedTravelInfoAtom);
-
-  console.log("account", account);
-  console.log("current header tab", currentTab);
-
   const [t, setT] = useState<Function | null>(null);
   const [showSelectPanel, setShowSelectPanel] = useState(false);
   const [open, setOpen] = useState(false);
   const [addressShortcut, setAddressShortcut] = useState("");
-  const [addressAvatarBase64, setAddressAvatarBase64] = useState<string>("");
+  const [isConnected, setIsConnected] = useState(false);
 
   const handleScanClick = () => {
     if (!account.address) {
@@ -92,45 +89,32 @@ const Header = ({ lang }: ConLangParams) => {
     LoadTranslation();
   }, [lang]);
 
-  const handleOpenChange = useCallback((isShowSelectPanel: boolean) => {
-    console.log("isShowSelectPanel", isShowSelectPanel);
-    setShowSelectPanel(isShowSelectPanel);
-  }, []);
-
-  const renderHeaderItem = (item: HeaderItem) => {
-    switch (item.type) {
-      case HeaderItemType.INTERNALLINK:
-        return (
-          <Link onClick={() => setCurrentTab(item.id)} href={item.jumpLink}>
-            {item.text}
-          </Link>
-        );
-        break;
-      case HeaderItemType.EXTERNALLINK:
-        return <span onClick={() => openLink(item.jumpLink)}>{item.text}</span>;
-        break;
-      case HeaderItemType.CATEGORY:
-        return (
-          <PopoverComponent trigger={item.text} sideOffset={20}>
-            <div className="flex flex-col px-[24px] py-[16px]">
-              {item.children?.map((item) => {
-                return (
-                  <span
-                    className="text-gray-100 my-[8px] cursor-pointer hover:text-white"
-                    key={item.text}
-                    onClick={() => openLink(item.jumpLink)}
-                  >
-                    {item.text}
-                  </span>
-                );
-              })}
-            </div>
-          </PopoverComponent>
-        );
-        break;
-      default:
-        break;
+  useEffect(() => {
+    const addressShortcut = getAccountShortcut(account.address);
+    if (addressShortcut) {
+      setAddressShortcut(addressShortcut);
     }
+  }, [account]);
+
+  const getAccountShortcut = (address: string | undefined) => {
+    if (!address) {
+      return;
+    }
+    const headLength = 8;
+    const tailLength = 4;
+    const head = address.slice(0, headLength);
+    const tail = address.slice(address.length - tailLength, address.length);
+    return `${head}...${tail}`;
+  };
+
+  const getTicketsProgress = () => {
+    const userTickets = combindedTravelInfo.travelInfo?.tickets;
+    const totalTickets = combindedTravelInfo.travelSettings?.totalTickets;
+    if (!userTickets || !totalTickets) {
+      return "0";
+    }
+    const progressPercentage = `${(userTickets / totalTickets) * 100}%`;
+    return progressPercentage;
   };
 
   const arr: HeaderItem[] = useMemo(() => {
@@ -218,15 +202,40 @@ const Header = ({ lang }: ConLangParams) => {
     ];
   }, []);
 
-  const getAccountShortcut = (address: string | undefined) => {
-    if (!address) {
-      return;
+  const renderHeaderItem = (item: HeaderItem) => {
+    switch (item.type) {
+      case HeaderItemType.INTERNALLINK:
+        return (
+          <Link onClick={() => setCurrentTab(item.id)} href={item.jumpLink}>
+            {item.text}
+          </Link>
+        );
+        break;
+      case HeaderItemType.EXTERNALLINK:
+        return <span onClick={() => openLink(item.jumpLink)}>{item.text}</span>;
+        break;
+      case HeaderItemType.CATEGORY:
+        return (
+          <PopoverComponent trigger={item.text} sideOffset={20}>
+            <div className="flex flex-col px-[24px] py-[16px]">
+              {item.children?.map((item) => {
+                return (
+                  <span
+                    className="text-gray-100 my-[8px] cursor-pointer hover:text-white"
+                    key={item.text}
+                    onClick={() => openLink(item.jumpLink)}
+                  >
+                    {item.text}
+                  </span>
+                );
+              })}
+            </div>
+          </PopoverComponent>
+        );
+        break;
+      default:
+        break;
     }
-    const headLength = 8;
-    const tailLength = 4;
-    const head = address.slice(0, headLength);
-    const tail = address.slice(address.length - tailLength, address.length);
-    return `${head}...${tail}`;
   };
 
   const accountTriggerButton = () => {
@@ -244,6 +253,10 @@ const Header = ({ lang }: ConLangParams) => {
       </div>
     );
   };
+
+  useEffect(() => {
+    setIsConnected(account.isConnected);
+  }, [account.isConnected]);
 
   return (
     <header className="relative h-20 flex items-center justify-center relative z-[1]">
@@ -264,7 +277,7 @@ const Header = ({ lang }: ConLangParams) => {
         })}
       </ul>
       <div className="absolute right-0 top-1/2 translate-y-[-50%]">
-        {account.isConnected && (
+        {isConnected && (
           <PopoverComponent
             trigger={accountTriggerButton()}
             align="start"
@@ -294,14 +307,18 @@ const Header = ({ lang }: ConLangParams) => {
                 </div>
               </div>
               <div className="w-full h-[112px] bg-[#302D2E] p-[16px] flex flex-col justify-between rounded-[12px]">
-                <div className="text-white text-[14px] font-[500] opacity-60 rounded-md">
-                  2/21 Tickets
+                <div className="text-white text-[14(px] font-[500] opacity-60 rounded-md">
+                  {combindedTravelInfo.travelInfo?.tickets}/
+                  {combindedTravelInfo.travelSettings?.totalTickets} Tickets
                 </div>
                 <div className="text-white text-[14px] opacity-60 rounded-md">
                   to earn big prize
                 </div>
                 <div className="bg-[#595758] w-full h-[20px] rounded-[4px]">
-                  <div className="bg-[#FF486D] h-full w-[60px] rounded-[4px]"></div>
+                  <div
+                    className={clsx("bg-[#FF486D] h-full w-[0px] rounded-[4px]")}
+                    style={{ width: getTicketsProgress() }}
+                  ></div>
                 </div>
               </div>
             </div>

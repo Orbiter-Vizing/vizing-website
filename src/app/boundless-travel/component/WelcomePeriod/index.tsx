@@ -1,18 +1,17 @@
 "use client";
+
 import { clsx } from "clsx";
 import styles from "./style.module.css";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import AuthCode from "react-auth-code-input";
 import { useRouter } from "next/navigation";
 import { useConnect, useConnectors } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { useChains } from "wagmi";
 import { toast } from "react-toastify";
-import { useAccountTravelInfo } from "@/hooks/i18n/client/useAccountTravelInfo";
 import { useAccount } from "wagmi";
 import { externalURLs } from "@/utils/constant";
-import { useCheckInviteCode } from "@/hooks/i18n/client/useAccountTravelInfo";
-import { RequestUserLoginInfoOutput } from "@/api/boundlessTravel";
+import { getBoundlessTravelSetting } from "@/api/boundlessTravel";
 // atom
 import { useAtom } from "jotai";
 import {
@@ -20,6 +19,7 @@ import {
   accountAddressAtom,
   beInvitedAtom,
   combinedTravelInfoAtom,
+  travelSettingsAtom,
 } from "@/atoms/accountAtom";
 // assets
 import IconNextArrow from "@/assets/images/icon/arrow-right.svg";
@@ -43,25 +43,23 @@ enum WelcomeTabIndex {
 }
 
 export default function WelcomePeriod() {
+  const account = useAccount();
+  const router = useRouter();
+
   const [currentTabIndex, setCurrentTabIndex] = useState(1);
   const [authCode, setAuthCode] = useState<string>();
   const [accountTravelInfo, setAccountTravelInfo] = useAtom(accountTravelInfoAtom);
   const [isInvited, setIsInvited] = useAtom(beInvitedAtom);
   const [accountAddress] = useAtom(accountAddressAtom);
+  const [travelSettings, setTravelSettings] = useAtom(travelSettingsAtom);
   const [combindedTravelInfo, setCombindedTravelInfo] = useAtom(combinedTravelInfoAtom);
-  const account = useAccount();
-  const router = useRouter();
+  const [isUserConnected, setIsUserConnected] = useState(false);
 
   // const { isPending, isFetching, isLoading, data, refetch } = useAccountTravelInfo(account.address);
-
-  // console.log("welcome signIn data", data);
 
   const { connect } = useConnect();
   const connectors = useConnectors();
   const chains = useChains();
-
-  console.log("connectors", connectors);
-  console.log("chains", chains);
 
   const handleOnChange = (res: string) => {
     setAuthCode(res);
@@ -97,15 +95,6 @@ export default function WelcomePeriod() {
     setCurrentTabIndex(tab);
   };
 
-  // const handleAdd1 = () => {
-  //   setCount((prev) => prev + 1);
-  // };
-
-  const handleConect = () => {
-    console.log("injected", injected());
-    connect({ connector: injected() });
-  };
-
   const connectMetamask = () => {
     const targetConnector = connectors.find((connector) => {
       return connector.name === "MetaMask";
@@ -135,14 +124,6 @@ export default function WelcomePeriod() {
     }
   };
 
-  const handleRequestClick = () => {
-    // const data = useAccountTravelInfo();
-    // console.log("account travel data", data);
-    // console.log("isFetching", isFetching);
-    // console.log("isPending", isPending);
-    // console.log("isLoading", isLoading);
-  };
-
   const handleClickXlink = () => {
     window.open(externalURLs.twitter);
   };
@@ -152,17 +133,14 @@ export default function WelcomePeriod() {
   };
 
   const enterTravelActivity = async () => {
-    console.log("dive into");
     if (!authCode) {
-      console.log("no code, just jump");
       setCombindedTravelInfo({
         ...combindedTravelInfo,
         isWelcomeViewed: true,
       });
-      // router.push("/boundless-travel/travel");
     } else {
       // check if the code is valid
-      console.log("authCode", authCode);
+      // console.log("authCode", authCode);
       const address = account.address;
       if (address && authCode) {
         try {
@@ -174,58 +152,44 @@ export default function WelcomePeriod() {
             ...combindedTravelInfo,
             isWelcomeViewed: true,
           });
-          // router.push("/boundless-travel/travel");
-          // console.log("check code vaid res", res);
-          // const res = {
-          //   code: 0,
-          //   data: {
-          //     success: true
-          //   }
-          // }
           // update account info
         } catch (error) {
           toast.error("Invalid invite code");
-          console.log("check res error", error);
+          console.error("check res error", error);
         }
       }
     }
   };
 
-  const initUserLoginInfo = async () => {
+  const initUserLoginInfo = useCallback(async () => {
     if (!accountTravelInfo && account.address) {
-      // const { isPending, isFetching, isLoading, data, refetch } = useAccountTravelInfo();
       const accountLoginInfo = await requestUserLoginInfo({
         account: account.address,
       });
-      console.log("init: accountLoginInfo", accountLoginInfo);
+      const travelSettings = await getBoundlessTravelSetting();
       setAccountTravelInfo(accountLoginInfo);
-      // if (data) {
-      //   // Check if data is defined
-      //   console.log("welcome effect data", data);
-      //   setAccountTravelInfo(data);
-      // }
+      setTravelSettings(travelSettings);
     }
-  };
+  }, [account.address, accountTravelInfo, setAccountTravelInfo, setTravelSettings]);
 
   useEffect(() => {
     initUserLoginInfo();
-  }, []);
+  }, [account, initUserLoginInfo]);
+
+  useEffect(() => {
+    setIsUserConnected(account.isConnected);
+  }, [account.isConnected]);
 
   return (
     <div className="w-full">
       <div className="flex justify-center text-[48px] text-white font-semibold mb-[54px] mt-[64px]">
         Welcome to Vizing
       </div>
-      {/* <div>count: {count}</div> */}
-      {/* <div onClick={handleAdd1} className="h-[30px] w-[30px] rounded border-[1px] border-white">
-        +1
-      </div> */}
       <div className="w-[800px] bg-[#232021] rounded-[24px] p-[24px] pb-[32px] mx-auto">
         <div className="flex justify-between mb-[24px]">
           {tabsArray.map((tab) => {
             return (
               <div
-                // className="flex items-center border-l-[4px] border-white text-[20px] font-medium"
                 className={clsx(
                   "flex items-center border-l-[4px] border-white text-[20px] text-[rgba(255,255,255,0.6)] font-medium",
                   tab.index <= currentTabIndex ? styles.passedPeriod : "",
@@ -276,7 +240,8 @@ export default function WelcomePeriod() {
               onClick={() => handlePeriodChange(WelcomeTabIndex.CONNECTSOCIAL)}
               className={clsx(
                 "w-full h-[56px] flex items-center justify-center w-full bg-[#FF486D] text-white rounded-[12px] text-[20px] font-bold hover:cursor-pointer",
-                !account.isConnected ? styles.disableButton : "",
+                // !account.isConnected ? styles.disableButton : "",
+                isUserConnected ? "" : styles.disableButton,
               )}
             >
               Next

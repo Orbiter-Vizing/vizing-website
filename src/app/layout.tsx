@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import clsx from "clsx";
 import { ToastContainer } from "react-toastify";
 import { EnvProvider } from "@/providers/envConfigProvider";
+import { DialogProvider } from "@/providers/dialogProvider";
 
 // wagmi
 import { WagmiProvider } from "wagmi";
@@ -39,26 +40,34 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={clsx(inter.className, "min-w-[1280px] px-[80px] bg-black")}>
+      <body
+        className={clsx(
+          inter.className,
+          "min-w-[1280px] max-w-[1440px] mx-auto px-[80px] bg-black",
+        )}
+      >
         <Providers>
           <Provider>
             <EnvProvider>
-              <Header lang={lang} />
-              <main className="min-h-screen flex-col pb-24">{children}</main>
-              <Footer />
-              <ToastContainer
-                position="top-center"
-                autoClose={3000}
-                theme="dark"
-                hideProgressBar={true}
-                newestOnTop={false}
-                closeOnClick={false}
-                closeButton={false}
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-              />
+              <DialogProvider>
+                <Header lang={lang} />
+                <main className="min-h-screen flex-col pb-24">{children}</main>
+                <Footer />
+                <ToastContainer
+                  position="top-center"
+                  autoClose={3000}
+                  theme="dark"
+                  hideProgressBar={true}
+                  newestOnTop={false}
+                  closeOnClick={false}
+                  closeButton={false}
+                  rtl={false}
+                  pauseOnFocusLoss
+                  draggable
+                  pauseOnHover
+                />
+              </DialogProvider>
+              {/* {renderDialog()} */}
             </EnvProvider>
           </Provider>
         </Providers>

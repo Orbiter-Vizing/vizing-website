@@ -1,14 +1,13 @@
 "use client";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { ethers, JsonRpcProvider, ZeroAddress } from "ethers";
+import { ethers, JsonRpcProvider, ZeroAddress, Contract } from "ethers";
 import { clsx } from "clsx";
 import Image from "next/image";
 import {
   useBalance,
   useAccount,
   useReadContract,
-  useChains,
   useChainId,
   useSwitchChain,
   useGasPrice,
@@ -32,6 +31,9 @@ import { requestUserLoginInfo, getPreMintInfo, getMintSigature } from "@/api/bou
 import { useContract, getCurrentEnvContract } from "@/hooks/i18n/client/useContract";
 import { useEthersSigner } from "@/hooks/i18n/client/useEthersSigner";
 import { useEnv } from "@/providers/envConfigProvider";
+import LoadingSpin from "@/component/Loading";
+import { useDialogComponent } from "@/component/Dialog";
+import { useDialog } from "@/providers/dialogProvider";
 // atom
 import { useAtom } from "jotai";
 import {
@@ -41,13 +43,14 @@ import {
   encodeEmptyInvitedCode,
 } from "@/atoms/accountAtom";
 // assets
-import IconSocialLinkArrow from "@/assets/images/icon/social-link-arrow.svg";
 import ImgPassport from "@/assets/images/boundless-travel/nft-passport.png";
 import ImgReferral from "@/assets/images/boundless-travel/referral.png";
 import IconTwitterWhite from "@/assets/images/social-media/twitter-white.svg";
 import IconCopy from "@/assets/images/icon/copy.svg";
 import IconVizingWhite from "@/assets/images/boundless-travel/vizing-white.svg";
 import IconLink from "@/assets/images/icon/link.svg";
+import SvgDialogBgPattern from "@/assets/images/boundless-travel/dialog-bg-pattern.svg";
+import { vizingLaunchPadAbi } from "@/abi/vizingLaunchPad";
 
 interface ReferralData {
   totalClaim: number;
@@ -60,20 +63,26 @@ export default function VPass() {
   const signer = useEthersSigner({
     chainId: walletChainId,
   });
+  const { currentEnvChainConfig } = useEnv();
   const { currentEnvExternalUrls, vizingConfig } = useEnv();
   const { initCotractVizingPassSBT, initCotractVizingLaunchPad } = useContract();
-  const { chains, switchChain } = useSwitchChain();
+  const { chains, switchChain, switchChainAsync } = useSwitchChain();
+  // const { showDialog } = useDialogComponent();
+  const { showDialog, hideDialog } = useDialog();
   const [accountTravelInfo, setAccountTravelInfo] = useAtom(accountTravelInfoAtom);
   const [inviteLink, setInviteLink] = useState("");
   const [selectedChain, setSelectedChain] = useState<ChainConfig>();
   const [chainList, setChainList] = useState<ChainConfig[]>();
   const [isChainListLoading, setIsChainListLoading] = useState(true);
   const [isUserMint, setIsUserMint] = useState(false);
+  const [isUserMintLoading, setIsUserMintLoading] = useState(true);
   const intervalIdRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const [isMinting, setIsMinting] = useState(false);
+  const messageTaskRef = useRef(false);
 
-  const referralResult = useReadContract({
+  const { data: referralResult, refetch: refetchReferralResult } = useReadContract({
     abi: vizingPassSBTAbi,
-    address: vizingPassSBTContractAddress,
+    address: "0x23f5e5bc8733562129fD5978dCA91485c9F91b8a",
     functionName: "getUserInfo",
     args: [account.address],
     chainId: (process.env.NEXT_PUBLIC_ENV as EnvMode) === "production" ? 28518 : 28516,
@@ -85,6 +94,7 @@ export default function VPass() {
     }
     try {
       await navigator.clipboard.writeText(inviteLink);
+      console.log("copy inviteLink", inviteLink);
       toast.success("Copy invite link successfully!");
     } catch (err) {
       console.error("copy clipboard failed:", err);
@@ -101,7 +111,6 @@ export default function VPass() {
       const accountLoginInfo = await requestUserLoginInfo({
         account: account.address,
       });
-      console.log("vpass init: accountLoginInfo", accountLoginInfo);
       setAccountTravelInfo(accountLoginInfo);
       const inviteLink = `${currentEnvExternalUrls.homepage}/boundless-travel?inviteCode=${accountLoginInfo.code}`;
       setInviteLink(inviteLink);
@@ -118,6 +127,7 @@ export default function VPass() {
       const contractVPassSBT = await initCotractVizingPassSBT(vizingProvider);
       const isUserMint = await contractVPassSBT.getIfAlreadyMint(userAddress);
       setIsUserMint(isUserMint);
+      setIsUserMintLoading(false);
     } catch (error) {
       console.error("Get mint info error", error);
     }
@@ -143,81 +153,159 @@ export default function VPass() {
     }
   }, [account.address]);
 
+  const renderDialogLevel2Content = useCallback(() => {
+    return (
+      <div className="relative h-[378px] w-[618px] p-[44px] bg-[#232021] rounded-[24px] overflow-hidden">
+        <SvgDialogBgPattern className="absolute z-1 top-[-500px] left-[-500px]" />
+        <div className="relative z-2">
+          <div className="flex flex-col mb-[70px] text-[36px] font-[500] text-center leading-[44px] text-center">
+            <p>Congratulations on</p>
+            <p>successfully sharing your</p>
+            <p>invitation code!</p>
+          </div>
+          <div
+            onClick={hideDialog}
+            className="flex justify-center items-center h-[56px] mb-[20px] rounded-[12px] text-[20px] text-white font-[700] bg-[#FF486D] hover:cursor-pointer"
+          >
+            Start collecting your badges to earn rewards! &gt;
+          </div>
+        </div>
+      </div>
+    );
+  }, [hideDialog]);
+
   // const currentChainGasPrice = useGasPrice();
-
-  const crossChainMint = async (signature: string) => {
-    const userAddress = account.address;
-    if (!userAddress || !signer) {
-      return;
-    }
-    const preMintInfo = await getPreMintInfo({ account: userAddress });
-    const mintPrice =
-      preMintInfo.invitedCode === encodeEmptyInvitedCode
-        ? ethers.parseEther("0.001")
-        : ethers.parseEther("0.0008");
-    const contractLauchPad = await initCotractVizingLaunchPad(signer);
-    const vizingProvider = new JsonRpcProvider(vizingConfig.rpcUrl);
-    const contractVPassSBT = await initCotractVizingPassSBT(vizingProvider);
-    const vizingPassSBTContractAddress = getCurrentEnvContract().sbt;
-    const ZEROBYTES = "0x";
-    // const vizingChainId = (process.env.NEXT_PUBLIC_ENV as EnvMode) === "production" ? 28518 : 28516;
-    // console.log("invited code", ethers.hexlify(ethers.toUtf8Bytes("abcdef")));
-    const encodeData = await ethers.AbiCoder.defaultAbiCoder().encode(
-      ["address", "uint256", "address", "address", "bytes6", "bytes6", "uint256", "string"],
-      [
-        vizingPassSBTContractAddress,
-        vizingConfig.id,
-        account.address,
-        preMintInfo.invitedAccount,
-        preMintInfo.invitedCode,
-        preMintInfo.code,
-        mintPrice,
-        preMintInfo.metadataUri,
-      ],
-    );
-    const getEncodeSignData = await ethers.keccak256(encodeData);
-    const crossMessage = {
-      receiver: preMintInfo.account,
-      inviter: preMintInfo.invitedAccount || ZeroAddress,
-      inviteCode: preMintInfo.invitedCode,
-      personlInviteCode: preMintInfo.code,
-      encodeSignMessage: getEncodeSignData,
-      signature: signature,
-      mintPrice: mintPrice,
-      tokenMetadataUri: preMintInfo.metadataUri,
+  const renderDialogLevel1Content = useCallback(() => {
+    const handleDialogShareClick = () => {
+      hideDialog();
+      showDialog(renderDialogLevel2Content());
+      const twitterLink = currentEnvExternalUrls.twitter;
+      // copy invite link
+      window.open(twitterLink);
     };
-    const getEncodeData = await contractVPassSBT.getEncodeData(
-      crossMessage,
-      vizingPassSBTContractAddress,
-      // TODO: consider get gasLimit and gasPrice dynamicly
-      // by estimateGas and useGasPrice
-      BigInt(400000),
-      1_400_000_000,
-    );
-    const getOmniMessageFee = await contractLauchPad["estimateGas(uint256,uint64,bytes,bytes)"](
-      mintPrice,
-      vizingConfig.id,
-      "0x",
-      getEncodeData,
-    );
-    const getTotalETHAmount = getOmniMessageFee + mintPrice;
-    const currentTimestamp = Math.floor(Date.now() / 1000);
-    const crossMintResult = await contractLauchPad.Launch(
-      BigInt(currentTimestamp + 200),
-      BigInt(currentTimestamp + 60000),
-      ZeroAddress,
-      account.address,
-      mintPrice,
-      vizingConfig.id,
-      ZEROBYTES,
-      getEncodeData,
-      { value: getTotalETHAmount },
-    );
-    console.log("crossMintResult", crossMintResult);
-    // TODO: show status toast after crossMint
-  };
 
-  const mintVPass = async () => {
+    return (
+      <div className="relative h-[378px] w-[618px] p-[44px] bg-[#232021] rounded-[24px] overflow-hidden">
+        <SvgDialogBgPattern className="absolute z-1 top-[-500px] left-[-500px]" />
+        <div className="relative z-2">
+          <div className="flex flex-col mb-[70px] text-[36px] font-[500] text-center leading-[44px] text-center">
+            <p>Congratulations on</p>
+            <p>obtaining your V Pass!</p>
+          </div>
+          <div
+            onClick={hideDialog}
+            className="flex justify-center items-center h-[56px] mb-[20px] rounded-[12px] text-[20px] text-black font-[700] bg-white hover:cursor-pointer"
+          >
+            Start collecting your badges now! &gt;
+          </div>
+          <div
+            onClick={handleDialogShareClick}
+            className="flex justify-center items-center h-[56px] mb-[20px] rounded-[12px] text-[20px] text-white font-[700] bg-[#FF486D] hover:cursor-pointer"
+          >
+            Share to earn minting fee rewards! &gt;
+          </div>
+        </div>
+      </div>
+    );
+  }, [hideDialog, currentEnvExternalUrls, showDialog, renderDialogLevel2Content]);
+
+  const crossChainMint = useCallback(
+    async (signature: string, fromChainId: number) => {
+      try {
+        const userAddress = account.address;
+        if (!userAddress || !signer) {
+          return;
+        }
+        const preMintInfo = await getPreMintInfo({ account: userAddress });
+        const mintPrice =
+          preMintInfo.invitedCode === encodeEmptyInvitedCode
+            ? ethers.parseEther("0.001")
+            : ethers.parseEther("0.0008");
+        const currentChainConfig = currentEnvChainConfig.find((chain) => {
+          return chain.id === fromChainId;
+        });
+        if (!currentChainConfig) {
+          return;
+        }
+        const contractLauchPad = new Contract(
+          currentChainConfig.contracts.vizingPad,
+          vizingLaunchPadAbi,
+          signer,
+        );
+        const vizingProvider = new JsonRpcProvider(vizingConfig.rpcUrl);
+        const contractVPassSBT = await initCotractVizingPassSBT(vizingProvider);
+        const vizingPassSBTContractAddress = getCurrentEnvContract().sbt;
+        const ZEROBYTES = "0x";
+        const encodeData = await ethers.AbiCoder.defaultAbiCoder().encode(
+          ["address", "uint256", "address", "address", "bytes6", "bytes6", "uint256", "string"],
+          [
+            vizingPassSBTContractAddress,
+            vizingConfig.id,
+            account.address,
+            preMintInfo.invitedAccount,
+            preMintInfo.invitedCode,
+            preMintInfo.code,
+            mintPrice,
+            preMintInfo.metadataUri,
+          ],
+        );
+        const getEncodeSignData = await ethers.keccak256(encodeData);
+        const crossMessage = {
+          receiver: preMintInfo.account,
+          inviter: preMintInfo.invitedAccount || ZeroAddress,
+          inviteCode: preMintInfo.invitedCode,
+          personlInviteCode: preMintInfo.code,
+          encodeSignMessage: getEncodeSignData,
+          signature: signature,
+          mintPrice: mintPrice,
+          tokenMetadataUri: preMintInfo.metadataUri,
+        };
+        const getEncodeData = await contractVPassSBT.getEncodeData(
+          crossMessage,
+          vizingPassSBTContractAddress,
+          // TODO: consider get gasLimit and gasPrice dynamicly
+          // by estimateGas and useGasPrice
+          BigInt(400000),
+          1_400_000_000,
+        );
+        const getOmniMessageFee = await contractLauchPad["estimateGas(uint256,uint64,bytes,bytes)"](
+          mintPrice,
+          vizingConfig.id,
+          "0x",
+          getEncodeData,
+        );
+        const getTotalETHAmount = getOmniMessageFee + mintPrice;
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        const crossMintResult = await contractLauchPad.Launch(
+          BigInt(currentTimestamp + 200),
+          BigInt(currentTimestamp + 60000),
+          ZeroAddress,
+          account.address,
+          mintPrice,
+          vizingConfig.id,
+          ZEROBYTES,
+          getEncodeData,
+          { value: getTotalETHAmount },
+        );
+        showDialog(renderDialogLevel1Content());
+      } catch (error) {
+        console.error("crossMint failed.", error);
+      }
+      // TODO: show status toast after crossMint
+      setIsMinting(false);
+    },
+    [
+      account.address,
+      currentEnvChainConfig,
+      initCotractVizingPassSBT,
+      showDialog,
+      signer,
+      renderDialogLevel1Content,
+      vizingConfig,
+    ],
+  );
+
+  const mintVPassOnVizing = useCallback(async () => {
     const userAddress = account.address;
     if (!userAddress || !signer) {
       return;
@@ -228,25 +316,38 @@ export default function VPass() {
     const inviterAddress = preMintInfo.invitedAccount;
     const mintPrice =
       invitedCode === emptyInvitedCode ? ethers.parseEther("0.001") : ethers.parseEther("0.0008");
-    if (selectedChain?.name === "Vizing") {
-      // mint request from vizing
-      try {
-        const mintResult = await contractVPassSBT.publicMint(
-          preMintInfo.invitedCode,
-          preMintInfo.code,
-          inviterAddress,
-          preMintInfo.metadataUri,
-          {
-            value: mintPrice,
-          },
-        );
-        console.log("vizing mintResult", mintResult);
-        // TODO: show pending toast
-      } catch (error) {
-        console.error("Mint VPass failed.", error);
+    try {
+      const mintResult = await contractVPassSBT.publicMint(
+        preMintInfo.invitedCode,
+        preMintInfo.code,
+        inviterAddress,
+        preMintInfo.metadataUri,
+        {
+          value: mintPrice,
+        },
+      );
+      // TODO: show pending toast
+      showDialog(renderDialogLevel1Content());
+    } catch (error) {
+      console.error("Mint VPass failed.", error);
+    }
+    setIsMinting(false);
+  }, [
+    account.address,
+    accountTravelInfo,
+    initCotractVizingPassSBT,
+    renderDialogLevel1Content,
+    showDialog,
+    signer,
+  ]);
+
+  const mintVPassNotOnVizing = useCallback(
+    async (fromChainId: number) => {
+      const userAddress = account.address;
+      if (!userAddress || !signer) {
+        return;
       }
-    } else {
-      // mint request from other chain
+      const preMintInfo = await getPreMintInfo({ account: userAddress });
       try {
         intervalIdRef.current = setInterval(async () => {
           const signatureRes = await getMintSigature({
@@ -254,28 +355,91 @@ export default function VPass() {
           });
           if (signatureRes.signature) {
             clearInterval(intervalIdRef.current);
-            crossChainMint(signatureRes.signature);
+            crossChainMint(signatureRes.signature, fromChainId);
           }
         }, 1000);
       } catch (error) {
         console.error("Mint VPass failed.", error);
       }
-    }
-  };
+    },
+    [account.address, crossChainMint, signer],
+  );
 
-  const handleMintVPass = () => {
+  const handleMintVPass = async () => {
+    if (isMinting) {
+      return;
+    }
     if (!selectedChain) {
       toast.info("Please select chain.");
       return;
     }
-    if (selectedChain.id !== walletChainId) {
+    setIsMinting(true);
+    let fromChainId = walletChainId;
+    try {
+      if (selectedChain.id !== walletChainId) {
+        // wallet chain is not matching, change chain
+        // switch chain async
+        // const switchResult = await switchChainAsync({
+        //   chainId: selectedChain.id,
+        // });
+        switchChain({
+          chainId: selectedChain.id,
+        });
+        messageTaskRef.current = true;
+      } else {
+        if (fromChainId === vizingConfig.id) {
+          mintVPassOnVizing();
+        } else {
+          mintVPassNotOnVizing(fromChainId);
+        }
+      }
+    } catch (error) {
+      setIsMinting(false);
+    }
+  };
+
+  const getUserSBTInfo = useCallback(async () => {
+    const userAddress = account.address;
+    if (!userAddress) {
+      return false;
+    }
+    const vizingProvider = new JsonRpcProvider(vizingConfig.rpcUrl);
+    const contractVPassSBT = await initCotractVizingPassSBT(vizingProvider);
+    const userSBTInfo = await contractVPassSBT.getUserInfo(userAddress);
+    return userSBTInfo;
+  }, [account, vizingConfig, initCotractVizingPassSBT]);
+
+  const isClaimValid = async () => {
+    const userSBTInfo = await getUserSBTInfo();
+    const totalClaim = userSBTInfo[4];
+    const totalReferral = userSBTInfo[3];
+    return totalClaim < totalReferral;
+  };
+
+  const handleClaim = async () => {
+    if (!signer) {
+      return;
+    }
+    // check user has unclaimed token
+    const isClaimAvailable = await isClaimValid();
+    if (!isClaimAvailable) {
+      toast.info("There is no token left to claim.");
+      return;
+    }
+    if (walletChainId !== vizingConfig.id) {
       // wallet chain is not matching, change chain
-      switchChain({
-        chainId: selectedChain.id,
+      const switchResult = await switchChainAsync({
+        chainId: vizingConfig.id,
       });
-      mintVPass();
+      const contractVPassSBT = await initCotractVizingPassSBT(signer);
+      const referralResult = await contractVPassSBT.referralMint();
+      toast.success("Claim successfully!");
+      refetchReferralResult();
     } else {
-      mintVPass();
+      const contractVPassSBT = await initCotractVizingPassSBT(signer);
+      const referralResult = await contractVPassSBT.referralMint();
+      toast.success("Claim successfully!");
+      refetchReferralResult();
     }
   };
 
@@ -303,6 +467,21 @@ export default function VPass() {
     initUserMintInfo();
   }, [initUserLoginInfo, initUserMintInfo]);
 
+  useEffect(() => {
+    // console.log("signer change effectd", signer);
+    if (signer && isMinting) {
+      try {
+        if (walletChainId === vizingConfig.id) {
+          mintVPassOnVizing();
+        } else {
+          mintVPassNotOnVizing(walletChainId);
+        }
+      } catch (error) {
+        console.error("signer effect error", error);
+      }
+    }
+  }, [signer, mintVPassNotOnVizing, mintVPassOnVizing, vizingConfig, walletChainId, isMinting]);
+
   const isInvited =
     accountTravelInfo?.invitedCode && accountTravelInfo?.invitedCode !== emptyInvitedCode;
 
@@ -316,75 +495,94 @@ export default function VPass() {
             src={ImgPassport}
             alt="boundless-travel-passport"
           />
-          {isUserMint ? (
-            <div className="flex flex-col pt-[56px]">
-              <div className="flex mb-[40px] items-center text-[30px] font-[500]">
-                VPass#{9876}
-                <IconVizingWhite className="h-[24px] w-[29px] ml-[10px]" />
-              </div>
-              <p className="text-[20px] font-[500] mb-[7px]">
-                The First Omni-Chain SBT on Vizing Ecosystem
-              </p>
-              <div className="flex text-[20px] font-[500] mb-[7px]">
-                {getSBTContractAddressShortcut()}
-                <IconLink
-                  onClick={navigateToSBTContract}
-                  className="h-[26px] w-[26px] ml-[4px] hover:cursor-pointer"
-                />
-              </div>
+          {!isUserMintLoading ? (
+            <div>
+              {isUserMint ? (
+                <div className="flex flex-col pt-[56px]">
+                  <div className="flex mb-[40px] items-center text-[30px] font-[500]">
+                    VPass#{9876}
+                    <IconVizingWhite className="h-[24px] w-[29px] ml-[10px]" />
+                  </div>
+                  <p className="text-[20px] font-[500] mb-[7px]">
+                    The First Omni-Chain SBT on Vizing Ecosystem
+                  </p>
+                  <div className="flex text-[20px] font-[500] mb-[7px]">
+                    {getSBTContractAddressShortcut()}
+                    <IconLink
+                      onClick={navigateToSBTContract}
+                      className="h-[26px] w-[26px] ml-[4px] hover:cursor-pointer"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  <div className="mb-[16px]">Select Networks</div>
+                  <div className="w-[290px] h-[94px] flex flex-wrap items-between justify-start pl-[13px] py-[9px] mb-[19px] rounded-[12px] bg-[rgba(145,114,120,0.24)]">
+                    {chainList &&
+                      chainList.map((chain) => {
+                        return (
+                          <div
+                            className={clsx(
+                              "relative mr-[14px] mb-[14px] rounded-full border-[1px] border-transparent hover:cursor-pointer duration-300",
+                              selectedChain?.id === chain.id ? styles.selectedChain : "",
+                              chain.balance && chain.balance > BigInt(0)
+                                ? styles.chainWithBalance
+                                : "",
+                            )}
+                            key={chain.id}
+                            onClick={() => handleSelectChain(chain)}
+                          >
+                            <div
+                              className={clsx(
+                                "absolute top-0 left-0 h-full w-full rounded-full",
+                                chain.balance && chain.balance > BigInt(0)
+                                  ? styles.chainWithBalance
+                                  : "",
+                              )}
+                            ></div>
+                            <Image
+                              className="h-[30px] w-[30px]"
+                              src={chain.IconUrl}
+                              alt="chain-icon"
+                            />
+                          </div>
+                        );
+                      })}
+                    {isChainListLoading && (
+                      <div className="h-full w-full flex items-center justify-center text-[rgba(255,255,255,0.2)] text-[12px]">
+                        <LoadingSpin />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-[16px] font-[400] mb-[10px]">
+                    <span className="text-white">Price：</span>
+                    <span className="text-[rgba(255,255,255,0.6)]">
+                      {isInvited ? `0.0008 ETH` : "0.001 ETH"}
+                    </span>
+                  </div>
+                  <div
+                    onClick={handleMintVPass}
+                    className="relative h-[56px] w-[262px] flex justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-pointer"
+                  >
+                    Mint
+                    {/* {isMinting && (
+                      <div className="absolute top-[50%] translate-y-[-50%] right-[70px] iline-block scale-55">
+                        <LoadingSpin />
+                      </div>
+                    )} */}
+                    {isInvited && (
+                      <div className="absolute right-[6px] top-[6px] h-[44px] w-[44px] flex flex-col items-center justify-center rounded-[12px] text-[#FF486D] text-[14px] font-[600] bg-white">
+                        <span>20%</span>
+                        <span>OFF</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="flex flex-col">
-              <div className="mb-[16px]">Select Networks</div>
-              <div className="w-[290px] h-[94px] flex flex-wrap items-between justify-start pl-[13px] py-[9px] mb-[19px] rounded-[12px] bg-[rgba(145,114,120,0.24)]">
-                {chainList &&
-                  chainList.map((chain) => {
-                    return (
-                      <div
-                        className={clsx(
-                          "relative mr-[14px] mb-[14px] rounded-full border-[1px] border-transparent hover:cursor-pointer duration-300",
-                          selectedChain?.id === chain.id ? styles.selectedChain : "",
-                          chain.balance && chain.balance > BigInt(0) ? styles.chainWithBalance : "",
-                        )}
-                        key={chain.id}
-                        onClick={() => handleSelectChain(chain)}
-                      >
-                        <div
-                          className={clsx(
-                            "absolute top-0 left-0 h-full w-full rounded-full",
-                            chain.balance && chain.balance > BigInt(0)
-                              ? styles.chainWithBalance
-                              : "",
-                          )}
-                        ></div>
-                        <Image className="h-[30px] w-[30px]" src={chain.IconUrl} alt="chain-icon" />
-                      </div>
-                    );
-                  })}
-                {isChainListLoading && (
-                  <div className="h-full w-full flex items-center justify-center text-[rgba(255,255,255,0.2)] text-[12px]">
-                    Loading...
-                  </div>
-                )}
-              </div>
-              <div className="text-[16px] font-[400] mb-[10px]">
-                <span className="text-white">Price：</span>
-                <span className="text-[rgba(255,255,255,0.6)]">
-                  {isInvited ? `0.0008 ETH` : "0.001 ETH"}
-                </span>
-              </div>
-              <div
-                onClick={handleMintVPass}
-                className="relative h-[56px] w-[262px] flex justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px]"
-              >
-                Mint
-                {isInvited && (
-                  <div className="absolute right-[6px] top-[6px] h-[44px] w-[44px] flex flex-col items-center justify-center rounded-[12px] text-[#FF486D] text-[14px] font-[600] bg-white">
-                    <span>20%</span>
-                    <span>OFF</span>
-                  </div>
-                )}
-              </div>
+            <div className="flex flex-1 justify-center items-center">
+              <LoadingSpin />
             </div>
           )}
         </div>
@@ -408,17 +606,18 @@ export default function VPass() {
             <div className="text-[16px] font-[400] mb-[10px] leading-[30px]">
               <span className="text-white">Amount：</span>
               <span className="text-[rgba(255,255,255,0.6)]">
-                {(referralResult.data as ReferralData) &&
-                  (referralResult.data as ReferralData).totalClaim}
+                {(referralResult as ReferralData) && (referralResult as ReferralData).totalClaim}
               </span>
             </div>
             <div className="text-[16px] font-[400] mb-[34px] leading-[30px]">
               <span className="text-white">Successfully invited：</span>
               <span className="text-[rgba(255,255,255,0.6)]">
-                {(referralResult.data as ReferralData) &&
-                  (referralResult.data as ReferralData).totalReferral}
+                {(referralResult as ReferralData) && (referralResult as ReferralData).totalReferral}
               </span>
-              <span className="w-[75px] h-[40px] inline-flex items-center justify-center ml-[44px] border-[1px] border-[rgba(242,63,93,0.3)] text-[16px] font-[500] rounded-[12px] bg-[rgba(242,63,93,0.1)]">
+              <span
+                onClick={handleClaim}
+                className="w-[75px] h-[40px] inline-flex items-center justify-center ml-[44px] border-[1px] border-[rgba(242,63,93,0.3)] text-[16px] font-[500] rounded-[12px] bg-[rgba(242,63,93,0.1)] hover:cursor-pointer hover:bg-[rgb(242,63,93)] duration-200"
+              >
                 Claim
               </span>
             </div>
