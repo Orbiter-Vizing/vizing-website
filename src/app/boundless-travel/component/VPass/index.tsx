@@ -76,6 +76,7 @@ export default function VPass() {
   const [isChainListLoading, setIsChainListLoading] = useState(true);
   const [isUserMint, setIsUserMint] = useState(false);
   const [isUserMintLoading, setIsUserMintLoading] = useState(true);
+  const [vPassId, setVPassId] = useState<number>();
   const intervalIdRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const [isMinting, setIsMinting] = useState(false);
   const messageTaskRef = useRef(false);
@@ -452,6 +453,17 @@ export default function VPass() {
     return `${head}...${tail}`;
   };
 
+  const getUserVPassId = useCallback(async () => {
+    const userAddress = account.address;
+    if (!userAddress) {
+      return;
+    }
+    const vizingProvider = new JsonRpcProvider(vizingConfig.rpcUrl);
+    const contractVPassSBT = await initCotractVizingPassSBT(vizingProvider);
+    const vPassId = await contractVPassSBT.getPersonalTokenSoulId(userAddress);
+    setVPassId(vPassId);
+  }, [account.address, initCotractVizingPassSBT, vizingConfig]);
+
   const navigateToSBTContract = () => {
     const sbtContractAddress = getCurrentEnvContract().sbt;
     const explorerUrl = getCurrentEnvExternalUrls().explorer;
@@ -459,13 +471,11 @@ export default function VPass() {
   };
 
   useEffect(() => {
-    getCurrentEnvChainBalance();
-  }, [getCurrentEnvChainBalance]);
-
-  useEffect(() => {
     initUserLoginInfo();
     initUserMintInfo();
-  }, [initUserLoginInfo, initUserMintInfo]);
+    getCurrentEnvChainBalance();
+    getUserVPassId();
+  }, [initUserLoginInfo, initUserMintInfo, getCurrentEnvChainBalance, getUserVPassId]);
 
   useEffect(() => {
     // console.log("signer change effectd", signer);
@@ -500,7 +510,7 @@ export default function VPass() {
               {isUserMint ? (
                 <div className="flex flex-col pt-[56px]">
                   <div className="flex mb-[40px] items-center text-[30px] font-[500]">
-                    VPass#{9876}
+                    VPass#{vPassId?.toString()}
                     <IconVizingWhite className="h-[24px] w-[29px] ml-[10px]" />
                   </div>
                   <p className="text-[20px] font-[500] mb-[7px]">
@@ -635,7 +645,7 @@ export default function VPass() {
                   onClick={copyInviteLink}
                   className="h-[56px] w-[56px] flex items-center justify-center rounded-[12px] bg-[#FF486D] hover:cursor-pointer"
                 >
-                  <IconCopy onCick className="h-[30px] w-[30px] hover:cursor-pointer" />
+                  <IconCopy className="h-[30px] w-[30px] hover:cursor-pointer" />
                 </div>
               </div>
               <a href={currentEnvExternalUrls.twitter} target="_blank" rel="noopener noreferrer">

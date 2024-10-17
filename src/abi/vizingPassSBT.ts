@@ -262,19 +262,6 @@ export const vizingPassSBTAbi = [
     inputs: [
       {
         indexed: false,
-        internalType: "uint256",
-        name: "_tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "MetadataUpdate",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
         internalType: "address",
         name: "mintAddress",
         type: "address",
@@ -741,6 +728,25 @@ export const vizingPassSBTAbi = [
   {
     inputs: [],
     name: "getLastTokenId",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_user",
+        type: "address",
+      },
+    ],
+    name: "getPersonalTokenSoulId",
     outputs: [
       {
         internalType: "uint256",
