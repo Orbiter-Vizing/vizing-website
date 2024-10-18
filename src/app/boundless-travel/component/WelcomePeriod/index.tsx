@@ -20,6 +20,7 @@ import {
   beInvitedAtom,
   combinedTravelInfoAtom,
   travelSettingsAtom,
+  emptyInvitedCode,
 } from "@/atoms/accountAtom";
 // assets
 import IconNextArrow from "@/assets/images/icon/arrow-right.svg";
@@ -93,6 +94,14 @@ export default function WelcomePeriod() {
 
   const handlePeriodChange = (tab: number) => {
     setCurrentTabIndex(tab);
+  };
+
+  const handlePeriod1Click = (tab: number) => {
+    if (account.isConnected && accountTravelInfo?.invitedCode !== emptyInvitedCode) {
+      enterTravelActivity();
+    } else {
+      handlePeriodChange(tab);
+    }
   };
 
   const connectMetamask = () => {
@@ -237,14 +246,16 @@ export default function WelcomePeriod() {
               Wallet Connect
             </div>
             <div
-              onClick={() => handlePeriodChange(WelcomeTabIndex.CONNECTSOCIAL)}
+              onClick={() => handlePeriod1Click(WelcomeTabIndex.CONNECTSOCIAL)}
               className={clsx(
                 "w-full h-[56px] flex items-center justify-center w-full bg-[#FF486D] text-white rounded-[12px] text-[20px] font-bold hover:cursor-pointer",
                 // !account.isConnected ? styles.disableButton : "",
                 isUserConnected ? "" : styles.disableButton,
               )}
             >
-              Next
+              {account.isConnected && accountTravelInfo?.invitedCode !== emptyInvitedCode
+                ? "Dive into Vizing"
+                : "Next"}
             </div>
           </div>
         )}
