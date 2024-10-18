@@ -21,13 +21,13 @@ export default function ExploreVizing() {
         content:
           "Retweet this announcement to spread the word and get more people involved in the event!",
         buttonText: "Retweet",
-        link: externalURLs.twitter,
+        link: "https://x.com/Vizing_L2/status/1846134942675443867",
       },
       {
         title: "Join our community",
         content: "Join our community, engage in discussions, and help us grow together!",
         buttonText: "Join",
-        link: externalURLs.discord,
+        link: "https://t.me/orbiter_vizing_chat",
       },
     ];
   }, []);
