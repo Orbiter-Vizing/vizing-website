@@ -22,6 +22,7 @@ import {
   travelSettingsAtom,
   emptyInvitedCode,
 } from "@/atoms/accountAtom";
+import { checkIsInviteCodeValid, requestUserLoginInfo } from "@/api/boundlessTravel";
 // assets
 import IconNextArrow from "@/assets/images/icon/arrow-right.svg";
 import IconWalletconnect from "@/assets/images/wallets/walletconnect.svg";
@@ -29,7 +30,8 @@ import IconMetamask from "@/assets/images/wallets/metamask.svg";
 import IconOkxWallet from "@/assets/images/wallets/okx.svg";
 import IconTwitter from "@/assets/images/social-media/twitter.svg";
 import IconDiscord from "@/assets/images/social-media/discord.svg";
-import { checkIsInviteCodeValid, requestUserLoginInfo } from "@/api/boundlessTravel";
+import IconTelegram from "@/assets/images/social-media/telegram.svg";
+import { useEnv } from "@/providers/envConfigProvider";
 
 enum WelcomeTabs {
   CONNECTWALLET = "connectWallet",
@@ -46,6 +48,7 @@ enum WelcomeTabIndex {
 export default function WelcomePeriod() {
   const account = useAccount();
   const router = useRouter();
+  const envConfig = useEnv();
 
   const [currentTabIndex, setCurrentTabIndex] = useState(1);
   const [authCode, setAuthCode] = useState<string>();
@@ -134,11 +137,11 @@ export default function WelcomePeriod() {
   };
 
   const handleClickXlink = () => {
-    window.open(externalURLs.twitter);
+    window.open(envConfig.currentEnvExternalUrls.twitter);
   };
 
-  const handleClickDiscordlink = () => {
-    window.open(externalURLs.discord);
+  const handleClickCommunitylink = () => {
+    window.open(envConfig.currentEnvExternalUrls.telegram);
   };
 
   const enterTravelActivity = async () => {
@@ -270,10 +273,12 @@ export default function WelcomePeriod() {
                 Follow @Vizing_L2 on X
               </div>
               <div
-                onClick={handleClickDiscordlink}
+                onClick={handleClickCommunitylink}
                 className="w-full h-[100px] bg-[#302D2E] mb-[20px] rounded-[12px] flex items-center justify-center text-[20px] font-[500] hover:cursor-pointer"
               >
-                <IconDiscord className="w-[60px] h-[60px] rounded mr-[20px]" />
+                <div className="flex justify-center items-center h-[60px] w-[60px] rounded-full mr-[20px] bg-[#140F0F] border-[1px] border-[rgba(255,255,255,0.25)]">
+                  <IconTelegram className="w-[16px] h-[16px] rounded scale-125" />
+                </div>
                 Join our community
               </div>
             </div>
