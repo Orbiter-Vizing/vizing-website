@@ -56,12 +56,9 @@ const Header = ({ lang }: ConLangParams) => {
   const account = useAccount();
   const { disconnect } = useDisconnect();
 
-  const [accountAddress, setAccountAddress] = useAtom<string | null>(accountAddressAtom);
   const [currentTab, setCurrentTab] = useAtom(currentHeaderTab);
   const [combindedTravelInfo, setCombindedTravelInfo] = useAtom(combinedTravelInfoAtom);
   const [t, setT] = useState<Function | null>(null);
-  const [showSelectPanel, setShowSelectPanel] = useState(false);
-  const [open, setOpen] = useState(false);
   const [addressShortcut, setAddressShortcut] = useState("");
   const [isConnected, setIsConnected] = useState(false);
 
@@ -117,7 +114,7 @@ const Header = ({ lang }: ConLangParams) => {
     return progressPercentage;
   };
 
-  const arr: HeaderItem[] = useMemo(() => {
+  const headerItemArray: HeaderItem[] = useMemo(() => {
     return [
       {
         id: HeaderItemKey.HOME,
@@ -262,13 +259,13 @@ const Header = ({ lang }: ConLangParams) => {
     <header className="relative h-20 flex items-center justify-center relative z-[1]">
       <Logo className="absolute left-0 top-1/2 translate-y-[-50%] h-10 w-auto cursor-pointer" />
       <ul className="w-fit flex items-center justify-center text-[16px] gap-[24px] font-[400] text-[#fff]/80 lg:flex flex flex-row items-center">
-        {arr.map((item, index) => {
+        {headerItemArray.map((item, index) => {
           return (
             <li
               key={index}
               className={cn(
                 "relative cursor-pointer",
-                currentTab === item.id ? styles.textSelected : "",
+                pathname === item.jumpLink ? styles.textSelected : "",
               )}
             >
               {renderHeaderItem(item)}
