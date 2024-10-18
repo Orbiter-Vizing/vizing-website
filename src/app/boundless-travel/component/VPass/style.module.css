@@ -9,3 +9,8 @@
 .chainWithBalance {
   background-color: rgba(255,72,109,0.3);
 }
+
+.isMinting {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

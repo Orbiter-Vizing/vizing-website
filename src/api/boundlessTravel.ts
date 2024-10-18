@@ -40,7 +40,7 @@ export const requestUserLoginInfo = ({
       if (res.data.data) {
         return res.data.data;
       } else {
-        throw new Error("Check invited code failed.");
+        throw new Error("Request user login info failed.");
       }
     });
 };
@@ -107,7 +107,7 @@ export const getPreMintInfo = ({
       if (res.data.data) {
         return res.data.data;
       } else {
-        throw new Error("Check invited code failed.");
+        throw new Error("Get pre-mint info failed.");
       }
     });
 };

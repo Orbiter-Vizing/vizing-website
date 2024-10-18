@@ -60,6 +60,9 @@ interface ReferralData {
 export default function VPass() {
   const account = useAccount();
   const walletChainId = useChainId();
+  // const signer = useEthersSigner({
+  //   chainId: walletChainId,
+  // });
   const signer = useEthersSigner({
     chainId: walletChainId,
   });
@@ -79,6 +82,7 @@ export default function VPass() {
   const [vPassId, setVPassId] = useState<number>();
   const intervalIdRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const [isMinting, setIsMinting] = useState(false);
+  const [isMinting2, setIsMinting2] = useState(false);
   const messageTaskRef = useRef(false);
 
   const { data: referralResult, refetch: refetchReferralResult } = useReadContract({
@@ -165,7 +169,10 @@ export default function VPass() {
             <p>invitation code!</p>
           </div>
           <div
-            onClick={hideDialog}
+            onClick={() => {
+              hideDialog();
+              initUserMintInfo();
+            }}
             className="flex justify-center items-center h-[56px] mb-[20px] rounded-[12px] text-[20px] text-white font-[700] bg-[#FF486D] hover:cursor-pointer"
           >
             Start collecting your badges to earn rewards! &gt;
@@ -194,7 +201,10 @@ export default function VPass() {
             <p>obtaining your V Pass!</p>
           </div>
           <div
-            onClick={hideDialog}
+            onClick={() => {
+              hideDialog();
+              initUserMintInfo();
+            }}
             className="flex justify-center items-center h-[56px] mb-[20px] rounded-[12px] text-[20px] text-black font-[700] bg-white hover:cursor-pointer"
           >
             Start collecting your badges now! &gt;
@@ -211,10 +221,11 @@ export default function VPass() {
   }, [hideDialog, currentEnvExternalUrls, showDialog, renderDialogLevel2Content]);
 
   const crossChainMint = useCallback(
-    async (signature: string, fromChainId: number) => {
+    async (signature: string) => {
       try {
         const userAddress = account.address;
         if (!userAddress || !signer) {
+          throw Error("Signer or user address is needed.");
           return;
         }
         const preMintInfo = await getPreMintInfo({ account: userAddress });
@@ -222,10 +233,12 @@ export default function VPass() {
           preMintInfo.invitedCode === encodeEmptyInvitedCode
             ? ethers.parseEther("0.001")
             : ethers.parseEther("0.0008");
+        console.log("find chain config", walletChainId);
         const currentChainConfig = currentEnvChainConfig.find((chain) => {
-          return chain.id === fromChainId;
+          return chain.id === walletChainId;
         });
         if (!currentChainConfig) {
+          throw Error("Chain selected is not supported.");
           return;
         }
         const contractLauchPad = new Contract(
@@ -289,11 +302,12 @@ export default function VPass() {
           { value: getTotalETHAmount },
         );
         showDialog(renderDialogLevel1Content());
+        // TODO: show status toast after crossMint
+        setIsMinting(false);
       } catch (error) {
-        console.error("crossMint failed.", error);
+        console.error("cross chain mint error", error);
+        setIsMinting(false);
       }
-      // TODO: show status toast after crossMint
-      setIsMinting(false);
     },
     [
       account.address,
@@ -332,7 +346,7 @@ export default function VPass() {
     } catch (error) {
       console.error("Mint VPass failed.", error);
     }
-    setIsMinting(false);
+    // setIsMinting(false);
   }, [
     account.address,
     accountTravelInfo,
@@ -342,62 +356,114 @@ export default function VPass() {
     signer,
   ]);
 
-  const mintVPassNotOnVizing = useCallback(
-    async (fromChainId: number) => {
-      const userAddress = account.address;
-      if (!userAddress || !signer) {
-        return;
-      }
-      const preMintInfo = await getPreMintInfo({ account: userAddress });
-      try {
-        intervalIdRef.current = setInterval(async () => {
-          const signatureRes = await getMintSigature({
-            hash: preMintInfo.signHash,
-          });
-          if (signatureRes.signature) {
-            clearInterval(intervalIdRef.current);
-            crossChainMint(signatureRes.signature, fromChainId);
-          }
-        }, 1000);
-      } catch (error) {
-        console.error("Mint VPass failed.", error);
-      }
-    },
-    [account.address, crossChainMint, signer],
-  );
-
-  const handleMintVPass = async () => {
-    if (isMinting) {
+  const mintVPassNotOnVizing = useCallback(async () => {
+    const userAddress = account.address;
+    if (!userAddress || !signer) {
       return;
     }
-    if (!selectedChain) {
-      toast.info("Please select chain.");
-      return;
-    }
-    setIsMinting(true);
-    let fromChainId = walletChainId;
     try {
-      if (selectedChain.id !== walletChainId) {
-        // wallet chain is not matching, change chain
-        // switch chain async
-        // const switchResult = await switchChainAsync({
-        //   chainId: selectedChain.id,
-        // });
-        switchChain({
-          chainId: selectedChain.id,
+      const preMintInfo = await getPreMintInfo({ account: userAddress });
+      console.log("mintVPassNotOnVizing preMintInfo", preMintInfo);
+      intervalIdRef.current = setInterval(async () => {
+        const signatureRes = await getMintSigature({
+          hash: preMintInfo.signHash,
         });
-        messageTaskRef.current = true;
-      } else {
-        if (fromChainId === vizingConfig.id) {
-          mintVPassOnVizing();
-        } else {
-          mintVPassNotOnVizing(fromChainId);
+        if (signatureRes.signature) {
+          clearInterval(intervalIdRef.current);
+          crossChainMint(signatureRes.signature);
         }
+      }, 1000);
+    } catch (error) {
+      console.error("mint pass not on vizing error", error);
+      setIsMinting(false);
+    }
+  }, [account.address, crossChainMint, signer]);
+
+  const mintVPass = () => {
+    try {
+      if (account.chainId === vizingConfig.id) {
+        console.log("mint on vizing");
+        mintVPassOnVizing();
+      } else {
+        console.log("mint not on vizing");
+        mintVPassNotOnVizing();
       }
     } catch (error) {
+      console.error("mintVpass error", error);
       setIsMinting(false);
     }
   };
+
+  const handleMintVPassClick = async () => {
+    try {
+      if (isMinting) {
+        return;
+      }
+      if (!selectedChain) {
+        toast.info("Please select chain.");
+        return;
+      }
+      // setIsMinting2(true);
+      console.log("after set isMinting", isMinting);
+      if (selectedChain.id !== account.chainId) {
+        toast("Switch to the chain you selected.");
+        switchChain(
+          {
+            chainId: selectedChain.id,
+          },
+          // {
+          //   onSuccess: () => {
+          //     console.log("switch chain success");
+          //     mintVPass();
+          //   },
+          //   onError: (switchError) => {
+          //     console.log("switch error", switchError);
+          //     setIsMinting(false);
+          //   },
+          // },
+        );
+      } else {
+        setIsMinting(true);
+        mintVPass();
+      }
+    } catch (error) {
+      console.error("click mint pass error", error);
+      setIsMinting(false);
+    }
+  };
+
+  // const handleMintVPass = async () => {
+  //   if (isMinting) {
+  //     return;
+  //   }
+  //   if (!selectedChain) {
+  //     toast.info("Please select chain.");
+  //     return;
+  //   }
+  //   setIsMinting(true);
+  //   let fromChainId = walletChainId;
+  //   try {
+  //     if (selectedChain.id !== walletChainId) {
+  //       // wallet chain is not matching, change chain
+  //       // switch chain async
+  //       // const switchResult = await switchChainAsync({
+  //       //   chainId: selectedChain.id,
+  //       // });
+  //       switchChain({
+  //         chainId: selectedChain.id,
+  //       });
+  //       messageTaskRef.current = true;
+  //     } else {
+  //       if (fromChainId === vizingConfig.id) {
+  //         mintVPassOnVizing();
+  //       } else {
+  //         mintVPassNotOnVizing(fromChainId);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     setIsMinting(false);
+  //   }
+  // };
 
   const getUserSBTInfo = useCallback(async () => {
     const userAddress = account.address;
@@ -477,20 +543,20 @@ export default function VPass() {
     getUserVPassId();
   }, [initUserLoginInfo, initUserMintInfo, getCurrentEnvChainBalance, getUserVPassId]);
 
-  useEffect(() => {
-    // console.log("signer change effectd", signer);
-    if (signer && isMinting) {
-      try {
-        if (walletChainId === vizingConfig.id) {
-          mintVPassOnVizing();
-        } else {
-          mintVPassNotOnVizing(walletChainId);
-        }
-      } catch (error) {
-        console.error("signer effect error", error);
-      }
-    }
-  }, [signer, mintVPassNotOnVizing, mintVPassOnVizing, vizingConfig, walletChainId, isMinting]);
+  // useEffect(() => {
+  //   // console.log("signer change effectd", signer);
+  //   if (signer && isMinting) {
+  //     try {
+  //       if (walletChainId === vizingConfig.id) {
+  //         mintVPassOnVizing();
+  //       } else {
+  //         mintVPassNotOnVizing(walletChainId);
+  //       }
+  //     } catch (error) {
+  //       console.error("signer effect error", error);
+  //     }
+  //   }
+  // }, [signer, mintVPassNotOnVizing, mintVPassOnVizing, vizingConfig, walletChainId, isMinting]);
 
   const isInvited =
     accountTravelInfo?.invitedCode && accountTravelInfo?.invitedCode !== emptyInvitedCode;
@@ -571,15 +637,22 @@ export default function VPass() {
                     </span>
                   </div>
                   <div
-                    onClick={handleMintVPass}
-                    className="relative h-[56px] w-[262px] flex justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-pointer"
+                    onClick={handleMintVPassClick}
+                    className={clsx(
+                      "relative h-[56px] w-[262px] flex justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-pointer",
+                      isMinting ? styles.isMinting : "",
+                    )}
                   >
                     Mint
-                    {/* {isMinting && (
-                      <div className="absolute top-[50%] translate-y-[-50%] right-[70px] iline-block scale-55">
+                    {isMinting && (
+                      <div
+                        className={clsx(
+                          "absolute top-[50%] translate-y-[-50%] right-[70px] iline-block scale-55",
+                        )}
+                      >
                         <LoadingSpin />
                       </div>
-                    )} */}
+                    )}
                     {isInvited && (
                       <div className="absolute right-[6px] top-[6px] h-[44px] w-[44px] flex flex-col items-center justify-center rounded-[12px] text-[#FF486D] text-[14px] font-[600] bg-white">
                         <span>20%</span>
