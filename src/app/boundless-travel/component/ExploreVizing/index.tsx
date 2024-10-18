@@ -24,7 +24,7 @@ export default function ExploreVizing() {
         link: externalURLs.twitter,
       },
       {
-        title: "Join Discord",
+        title: "Join our community",
         content: "Join our community, engage in discussions, and help us grow together!",
         buttonText: "Join",
         link: externalURLs.discord,
@@ -41,16 +41,18 @@ export default function ExploreVizing() {
       <h1 className="mb-[56px] text-white text-[48px] font-medium">Explore Vizing</h1>
       <div className="flex flex-col p-[44px] mb-[24px] border border-[1px] border-[rgba(255,255,255,0.12)] rounded-[24px] bg-[rgba(242,63,93,0.06)]">
         <p className="mb-[24px] text-[20px] text-white font-medium leading-[30px]">
-          Vizing is a cross-chain interoperability environment based on advanced zk technology and
-          enhanced with Rollup L2, developed by Orbiter Finance.
+          Vizing is an omni-chain coordination layer built on advanced zk technology, designed to
+          unify the fragmented blockchain landscape. It facilitates efficient cross-chain
+          operations, enhancing both interoperability and liquidity across diverse networks.
         </p>
         <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
-          The passport SBT NFT will be the foundation for you to start your boundless travel and
-          collect commemorative stamps. You must first obtain a passport.
+          The V Pass is a Omni-chain SBT NFT and your first step to embarking on your Boundless
+          Travel and collecting Boundless Travel NFTs. Make sure to mint your V Pass before starting
+          your journey.
         </p>
         <p className="text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
-          Each destination has its own commemorative stamp. You will receive the corresponding stamp
-          after completing all the activities at a destination. We hope you enjoy this journey!
+          These NFTs will serve as a record of your contributions to the Vizing ecosystem, unlocking
+          potential future benefits!
         </p>
       </div>
       <div className="flex space-x-[20px]">

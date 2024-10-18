@@ -274,7 +274,7 @@ export default function WelcomePeriod() {
                 className="w-full h-[100px] bg-[#302D2E] mb-[20px] rounded-[12px] flex items-center justify-center text-[20px] font-[500] hover:cursor-pointer"
               >
                 <IconDiscord className="w-[60px] h-[60px] rounded mr-[20px]" />
-                Join Discord
+                Join our community
               </div>
             </div>
             <div className="w-full flex justify-between">

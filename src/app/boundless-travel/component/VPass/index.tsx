@@ -669,16 +669,17 @@ export default function VPass() {
             </div>
           )}
         </div>
+
         <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
           Share to Earn：For every successful referral that results in a mint, you will receive a
-          rebate of 0.0005 ETH.
+          rebate of 0.0004 ETH.
         </p>
         <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
-          The Passport SBT is a non-transferable NFT card pack that records all your travel traces
-          in Vizing. It serves as a symbol of your status as an early participant.
+          The V Pass is a Omni-chain SBT NFT that records all your travel traces in Vizing. It
+          serves as a symbol of your status as an early bird.
         </p>
         <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
-          Let&apos;s expand the Vizing ecosystem together by collecting commemorative stamps!
+          Let&apos;s expand the Vizing ecosystem together by collecting Boundless Travel NFTs!
         </p>
       </div>
       <h1 className="mt-[88px] mb-[56px] text-white text-[48px] font-medium">Referral NFTs</h1>
@@ -730,16 +731,12 @@ export default function VPass() {
           </div>
         </div>
         <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
-          Share your invite code or Twitter post with friends. When a friend successfully mints a
-          passport and completes any Boundless Travel Renew task, they&apos;ll be considered a
-          successfully activated referral. As the referrer, you&apos;ll earn a reward.
-        </p>
-        <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
-          For each successfully referred user, you&apos;ll receive an Invite Commemorative Stamp as
-          a reward.
+          Share your invite code or Twitter post with your friends. Once your friend successfully
+          mints a V Pass, it will be considered a successful referral. As the referrer, you will
+          receive 50% profit sharing(0.0005E) and a Referral Token.
         </p>
       </div>
-      <div className="flex flex-wrap justify-between mt-[20px]">
+      {/* <div className="flex flex-wrap justify-between mt-[20px]">
         {activityList.map((protocolActivity) => {
           return (
             <div
@@ -766,7 +763,7 @@ export default function VPass() {
             </div>
           );
         })}
-      </div>
+      </div> */}
     </div>
   );
 }

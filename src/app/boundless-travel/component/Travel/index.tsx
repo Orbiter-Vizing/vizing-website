@@ -33,7 +33,7 @@ export default function BoundlessTravelContent() {
       },
       {
         id: SidebarItem.VPASS,
-        text: "vPass",
+        text: "V Pass",
         children: [],
       },
       // {
