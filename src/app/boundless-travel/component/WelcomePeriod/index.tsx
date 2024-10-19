@@ -51,7 +51,7 @@ export default function WelcomePeriod() {
   const envConfig = useEnv();
 
   const [currentTabIndex, setCurrentTabIndex] = useState(1);
-  const [authCode, setAuthCode] = useState<string>();
+  const [inputAuthCode, setInputAuthCode] = useState<string>();
   const [accountTravelInfo, setAccountTravelInfo] = useAtom(accountTravelInfoAtom);
   const [isInvited, setIsInvited] = useAtom(beInvitedAtom);
   const [accountAddress] = useAtom(accountAddressAtom);
@@ -66,7 +66,7 @@ export default function WelcomePeriod() {
   const chains = useChains();
 
   const handleOnChange = (res: string) => {
-    setAuthCode(res);
+    setInputAuthCode(res);
   };
 
   const tabsArray = useMemo(() => {
@@ -145,7 +145,7 @@ export default function WelcomePeriod() {
   };
 
   const enterTravelActivity = async () => {
-    if (!authCode) {
+    if (!inputAuthCode) {
       setCombindedTravelInfo({
         ...combindedTravelInfo,
         isWelcomeViewed: true,
@@ -154,17 +154,12 @@ export default function WelcomePeriod() {
       // check if the code is valid
       // console.log("authCode", authCode);
       const address = account.address;
-      if (address && authCode) {
+      if (address && inputAuthCode) {
         try {
           const res = await checkIsInviteCodeValid({
             account: address,
-            invitedCode: authCode,
+            invitedCode: inputAuthCode,
           });
-          setCombindedTravelInfo({
-            ...combindedTravelInfo,
-            isWelcomeViewed: true,
-          });
-          // update account info
         } catch (error) {
           toast.error("Invalid invite code");
           console.error("check res error", error);
