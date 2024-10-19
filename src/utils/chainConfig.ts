@@ -422,7 +422,7 @@ export const getCurrentEnvChainBalance = async () => {
   const balances = await Promise.all(
     currentEnvChainList.map(async (chain) => {
       const provider = new JsonRpcProvider(chain.rpcUrl);
-      const balance = await provider.getBalance("0x24F4F8e83eA08b7DCb7A579B1236fc3155300854");
+      const balance = await provider.getBalance("");
       return {
         ...chain,
         balance,

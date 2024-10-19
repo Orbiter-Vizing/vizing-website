@@ -142,3 +142,6 @@ export const referralContractAddress = "0x464D7c5ab53Bd53EA8d69C461587D654b09356
 export const vizingPassSBTContractAddress = "0x464D7c5ab53Bd53EA8d69C461587D654b09356FC";
 
 export const zeroAddress = "0x0000000000000000000000000000000000000000";
+
+export const normalMintFee = "0.001"; // ETH
+export const invitedMintFee = "0.0008"; // ETH

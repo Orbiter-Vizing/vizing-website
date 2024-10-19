@@ -66,8 +66,7 @@ export default function VPass() {
   const signer = useEthersSigner({
     chainId: walletChainId,
   });
-  const { currentEnvChainConfig } = useEnv();
-  const { currentEnvExternalUrls, vizingConfig } = useEnv();
+  const { currentEnvExternalUrls, vizingConfig, currentEnvChainConfig } = useEnv();
   const { initCotractVizingPassSBT, initCotractVizingLaunchPad } = useContract();
   const { chains, switchChain, switchChainAsync } = useSwitchChain();
   // const { showDialog } = useDialogComponent();
@@ -76,14 +75,11 @@ export default function VPass() {
   const [inviteLink, setInviteLink] = useState("");
   const [selectedChain, setSelectedChain] = useState<ChainConfig>();
   const [chainList, setChainList] = useState<ChainConfig[]>();
-  const [isChainListLoading, setIsChainListLoading] = useState(true);
   const [isUserMint, setIsUserMint] = useState(false);
   const [isUserMintLoading, setIsUserMintLoading] = useState(true);
   const [vPassId, setVPassId] = useState<number>();
   const intervalIdRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const [isMinting, setIsMinting] = useState(false);
-  const [isMinting2, setIsMinting2] = useState(false);
-  const messageTaskRef = useRef(false);
 
   const { data: referralResult, refetch: refetchReferralResult } = useReadContract({
     abi: vizingPassSBTAbi,
@@ -138,25 +134,28 @@ export default function VPass() {
     }
   }, [account.address, initCotractVizingPassSBT, vizingConfig]);
 
-  const getCurrentEnvChainBalance = useCallback(async () => {
-    const userAddress = account.address;
-    if (userAddress) {
-      const currentEnvChainList = getCurrentEnvChainConfig();
+  const initChainList = useCallback(async () => {
+    const currentEnvChainList = getCurrentEnvChainConfig();
+    setChainList(currentEnvChainList);
+    // The following: get chain list with balance
+    // const userAddress = account.address;
+    // if (userAddress) {
+    //   const currentEnvChainList = getCurrentEnvChainConfig();
 
-      const chainListWithBalance = await Promise.all(
-        currentEnvChainList.map(async (chain) => {
-          const provider = new JsonRpcProvider(chain.rpcUrl);
-          const balance = await provider.getBalance(userAddress);
-          return {
-            ...chain,
-            balance,
-          };
-        }),
-      );
-      setChainList(chainListWithBalance);
-      setIsChainListLoading(false);
-    }
-  }, [account.address]);
+    //   const chainListWithBalance = await Promise.all(
+    //     currentEnvChainList.map(async (chain) => {
+    //       const provider = new JsonRpcProvider(chain.rpcUrl);
+    //       const balance = await provider.getBalance(userAddress);
+    //       return {
+    //         ...chain,
+    //         balance,
+    //       };
+    //     }),
+    //   );
+    //   setChainList(chainListWithBalance);
+    //   setIsChainListLoading(false);
+    // }
+  }, []);
 
   const renderDialogLevel2Content = useCallback(() => {
     return (
@@ -180,7 +179,7 @@ export default function VPass() {
         </div>
       </div>
     );
-  }, [hideDialog]);
+  }, [hideDialog, initUserMintInfo]);
 
   // const currentChainGasPrice = useGasPrice();
   const renderDialogLevel1Content = useCallback(() => {
@@ -188,7 +187,6 @@ export default function VPass() {
       hideDialog();
       showDialog(renderDialogLevel2Content());
       const twitterLink = currentEnvExternalUrls.twitter;
-      // copy invite link
       window.open(twitterLink);
     };
 
@@ -218,7 +216,31 @@ export default function VPass() {
         </div>
       </div>
     );
-  }, [hideDialog, currentEnvExternalUrls, showDialog, renderDialogLevel2Content]);
+  }, [hideDialog, currentEnvExternalUrls, showDialog, renderDialogLevel2Content, initUserMintInfo]);
+
+  const checkIsUserBalanceEnough = useCallback(
+    async (userAddress: string, mintPrice: bigint, fee: bigint = BigInt(0)) => {
+      const currentChainConfig = currentEnvChainConfig.find((chain) => {
+        return chain.id === walletChainId;
+      });
+      if (!currentChainConfig) {
+        toast.info("Chain not supported.");
+        setIsMinting(false);
+        return false;
+      }
+      const provider = new JsonRpcProvider(currentChainConfig.rpcUrl);
+      const balance = await provider.getBalance(userAddress);
+      const leastBalannce = mintPrice + fee;
+      if (leastBalannce > balance) {
+        toast.info("Insufficient funds. Please top up.");
+        setIsMinting(false);
+        return false;
+      } else {
+        return true;
+      }
+    },
+    [currentEnvChainConfig, walletChainId],
+  );
 
   const crossChainMint = useCallback(
     async (signature: string) => {
@@ -288,6 +310,14 @@ export default function VPass() {
           "0x",
           getEncodeData,
         );
+        const isUserBalanceEnough = await checkIsUserBalanceEnough(
+          userAddress,
+          mintPrice,
+          getOmniMessageFee,
+        );
+        if (!isUserBalanceEnough) {
+          return;
+        }
         const getTotalETHAmount = getOmniMessageFee + mintPrice;
         const currentTimestamp = Math.floor(Date.now() / 1000);
         const crossMintResult = await contractLauchPad.Launch(
@@ -317,6 +347,8 @@ export default function VPass() {
       signer,
       renderDialogLevel1Content,
       vizingConfig,
+      walletChainId,
+      checkIsUserBalanceEnough,
     ],
   );
 
@@ -331,6 +363,10 @@ export default function VPass() {
     const inviterAddress = preMintInfo.invitedAccount;
     const mintPrice =
       invitedCode === emptyInvitedCode ? ethers.parseEther("0.001") : ethers.parseEther("0.0008");
+    const isUserBalanceEnough = await checkIsUserBalanceEnough(userAddress, mintPrice);
+    if (!isUserBalanceEnough) {
+      return;
+    }
     try {
       const mintResult = await contractVPassSBT.publicMint(
         preMintInfo.invitedCode,
@@ -354,6 +390,7 @@ export default function VPass() {
     renderDialogLevel1Content,
     showDialog,
     signer,
+    checkIsUserBalanceEnough,
   ]);
 
   const mintVPassNotOnVizing = useCallback(async () => {
@@ -539,24 +576,9 @@ export default function VPass() {
   useEffect(() => {
     initUserLoginInfo();
     initUserMintInfo();
-    getCurrentEnvChainBalance();
+    initChainList();
     getUserVPassId();
-  }, [initUserLoginInfo, initUserMintInfo, getCurrentEnvChainBalance, getUserVPassId]);
-
-  // useEffect(() => {
-  //   // console.log("signer change effectd", signer);
-  //   if (signer && isMinting) {
-  //     try {
-  //       if (walletChainId === vizingConfig.id) {
-  //         mintVPassOnVizing();
-  //       } else {
-  //         mintVPassNotOnVizing(walletChainId);
-  //       }
-  //     } catch (error) {
-  //       console.error("signer effect error", error);
-  //     }
-  //   }
-  // }, [signer, mintVPassNotOnVizing, mintVPassOnVizing, vizingConfig, walletChainId, isMinting]);
+  }, [initUserLoginInfo, initUserMintInfo, initChainList, getUserVPassId]);
 
   const isInvited =
     accountTravelInfo?.invitedCode && accountTravelInfo?.invitedCode !== emptyInvitedCode;
@@ -601,20 +623,12 @@ export default function VPass() {
                             className={clsx(
                               "relative mr-[14px] mb-[14px] rounded-full border-[1px] border-transparent hover:cursor-pointer duration-300",
                               selectedChain?.id === chain.id ? styles.selectedChain : "",
-                              chain.balance && chain.balance > BigInt(0)
-                                ? styles.chainWithBalance
-                                : "",
                             )}
                             key={chain.id}
                             onClick={() => handleSelectChain(chain)}
                           >
                             <div
-                              className={clsx(
-                                "absolute top-0 left-0 h-full w-full rounded-full",
-                                chain.balance && chain.balance > BigInt(0)
-                                  ? styles.chainWithBalance
-                                  : "",
-                              )}
+                              className={clsx("absolute top-0 left-0 h-full w-full rounded-full")}
                             ></div>
                             <Image
                               className="h-[30px] w-[30px]"
@@ -624,11 +638,6 @@ export default function VPass() {
                           </div>
                         );
                       })}
-                    {isChainListLoading && (
-                      <div className="h-full w-full flex items-center justify-center text-[rgba(255,255,255,0.2)] text-[12px]">
-                        <LoadingSpin />
-                      </div>
-                    )}
                   </div>
                   <div className="text-[16px] font-[400] mb-[10px]">
                     <span className="text-white">Price：</span>
