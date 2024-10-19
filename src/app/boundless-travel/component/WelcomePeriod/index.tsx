@@ -256,7 +256,7 @@ export default function WelcomePeriod() {
                 isUserConnected ? "" : styles.disableButton,
               )}
             >
-              {account.isConnected && accountTravelInfo?.invitedCode !== emptyInvitedCode
+              {isUserConnected && accountTravelInfo?.invitedCode !== emptyInvitedCode
                 ? "Dive into Vizing"
                 : "Next"}
             </div>
