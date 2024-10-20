@@ -69,8 +69,8 @@ export const checkIsInviteCodeValid = ({
       url: "analytics/boundless/bind",
     })
     .then((res) => {
-      if (res.data && res.data.code === 200) {
-        return res.data;
+      if ((res.status === 200 || res.status === 201) && res.data.data) {
+        return res.data.data;
       } else {
         throw new Error("Check invited code failed.");
       }

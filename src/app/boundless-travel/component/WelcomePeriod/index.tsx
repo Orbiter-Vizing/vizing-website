@@ -160,6 +160,12 @@ export default function WelcomePeriod() {
             account: address,
             invitedCode: inputAuthCode,
           });
+          if (res.success) {
+            setCombindedTravelInfo({
+              ...combindedTravelInfo,
+              isWelcomeViewed: true,
+            });
+          }
         } catch (error) {
           toast.error("Invalid invite code");
           console.error("check res error", error);
