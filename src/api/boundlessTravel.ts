@@ -166,3 +166,35 @@ export const getBoundlessTravelSetting = (): Promise<GetBoundlessTravelSettingOu
       }
     });
 };
+
+interface BindAcccountAndVPassParams {
+  account: string;
+  transactionHash: string;
+}
+
+interface BindAcccountAndVPassOutput {
+  success: boolean;
+}
+
+export const bindAcccountAndVPass = ({
+  account,
+  transactionHash, // `${chainId}-${hash}`
+}: BindAcccountAndVPassParams): Promise<BindAcccountAndVPassOutput> => {
+  return axios
+    .request({
+      baseURL: apiUrl,
+      data: {
+        account,
+        transactionHash,
+      },
+      method: "POST",
+      url: "analytics/boundless/vpass",
+    })
+    .then((res) => {
+      if (res.data.data) {
+        return res.data.data;
+      } else {
+        throw new Error("Bind VPass failed.");
+      }
+    });
+};

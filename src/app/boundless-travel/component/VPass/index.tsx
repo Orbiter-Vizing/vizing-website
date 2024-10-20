@@ -1,11 +1,10 @@
 "use client";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { ethers, JsonRpcProvider, ZeroAddress, Contract } from "ethers";
 import { clsx } from "clsx";
 import Image from "next/image";
 import {
-  useBalance,
   useAccount,
   useReadContract,
   useChainId,
@@ -13,10 +12,9 @@ import {
   useGasPrice,
   useBlockTransactionCount,
 } from "wagmi";
-import { readContract } from "@wagmi/core";
 
 import styles from "./style.module.css";
-import { EnvMode, getCurrentEnvExternalUrls, vizingPassSBTContractAddress } from "@/utils/constant";
+import { EnvMode, getCurrentEnvExternalUrls, TxStatus } from "@/utils/constant";
 import { activityList } from "./data";
 import {
   getCurrentEnvChainConfig,
@@ -27,13 +25,19 @@ import { referralERC20Abi } from "@/abi/referralErc20";
 import { vizingPassSBTAbi } from "@/abi/vizingPassSBT";
 import { config } from "@/config/config";
 import { getChainId } from "@/utils/chainConfig";
-import { requestUserLoginInfo, getPreMintInfo, getMintSigature } from "@/api/boundlessTravel";
+import {
+  requestUserLoginInfo,
+  getPreMintInfo,
+  getMintSigature,
+  bindAcccountAndVPass,
+} from "@/api/boundlessTravel";
 import { useContract, getCurrentEnvContract } from "@/hooks/i18n/client/useContract";
 import { useEthersSigner } from "@/hooks/i18n/client/useEthersSigner";
 import { useEnv } from "@/providers/envConfigProvider";
 import LoadingSpin from "@/component/Loading";
 import { useDialogComponent } from "@/component/Dialog";
 import { useDialog } from "@/providers/dialogProvider";
+import useGoogleEvent from "@/hooks/i18n/client/useGoogleEvent";
 // atom
 import { useAtom } from "jotai";
 import {
@@ -66,6 +70,7 @@ export default function VPass() {
   const signer = useEthersSigner({
     chainId: walletChainId,
   });
+  const { sendGoogleEvent } = useGoogleEvent();
   const { currentEnvExternalUrls, vizingConfig, currentEnvChainConfig } = useEnv();
   const { initCotractVizingPassSBT, initCotractVizingLaunchPad } = useContract();
   const { chains, switchChain, switchChainAsync } = useSwitchChain();
@@ -78,8 +83,12 @@ export default function VPass() {
   const [isUserMint, setIsUserMint] = useState(false);
   const [isUserMintLoading, setIsUserMintLoading] = useState(true);
   const [vPassId, setVPassId] = useState<number>();
-  const intervalIdRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const [isMinting, setIsMinting] = useState(false);
+  const [showCongratsDialog, setShowCongratsDialog] = useState(false);
+  const [isUserMintPending, setIsUserMintPending] = useState(false);
+  const [hasClaimTask, setHasClaimTask] = useState(false);
+  const congratsIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const intervalIdRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const { data: referralResult, refetch: refetchReferralResult } = useReadContract({
     abi: vizingPassSBTAbi,
@@ -95,8 +104,11 @@ export default function VPass() {
     }
     try {
       await navigator.clipboard.writeText(inviteLink);
-      console.log("copy inviteLink", inviteLink);
       toast.success("Copy invite link successfully!");
+      sendGoogleEvent({
+        event: "buttonClicked",
+        value: "copy-share",
+      });
     } catch (err) {
       console.error("copy clipboard failed:", err);
     }
@@ -106,33 +118,59 @@ export default function VPass() {
     setSelectedChain(chain);
   };
 
-  const initUserLoginInfo = useCallback(async () => {
-    if (account.address) {
-      // const { isPending, isFetching, isLoading, data, refetch } = useAccountTravelInfo();
-      const accountLoginInfo = await requestUserLoginInfo({
-        account: account.address,
-      });
-      setAccountTravelInfo(accountLoginInfo);
-      const inviteLink = `${currentEnvExternalUrls.homepage}/boundless-travel?inviteCode=${accountLoginInfo.code}`;
-      setInviteLink(inviteLink);
-    }
-  }, [account.address, setAccountTravelInfo, currentEnvExternalUrls]);
-
-  const initUserMintInfo = useCallback(async () => {
+  const intervalCheckUserMintInfo = useCallback(async () => {
     const userAddress = account.address;
-    if (!userAddress) {
-      return;
+    if (userAddress) {
+      const accountLoginInfo = await requestUserLoginInfo({
+        account: userAddress,
+      });
+      const vizingProvider = new JsonRpcProvider(vizingConfig.rpcUrl);
+      const contractVPassSBT = await initCotractVizingPassSBT(vizingProvider);
+      const isUserMint = await contractVPassSBT.getIfAlreadyMint(userAddress);
+      if (typeof accountLoginInfo.vPassHash === "string" && isUserMint) {
+        // vPass nft has been generated
+        const vPassId = await contractVPassSBT.getPersonalTokenSoulId(userAddress);
+        setVPassId(vPassId);
+        clearInterval(congratsIntervalRef.current);
+        setAccountTravelInfo(accountLoginInfo);
+        setIsUserMint(true);
+        setShowCongratsDialog(true);
+      }
     }
-    try {
+  }, [account.address, setAccountTravelInfo, initCotractVizingPassSBT, vizingConfig]);
+
+  const initUserLoginInfo = useCallback(async () => {
+    const userAddress = account.address;
+    if (userAddress) {
+      const accountLoginInfo = await requestUserLoginInfo({
+        account: userAddress,
+      });
       const vizingProvider = new JsonRpcProvider(vizingConfig.rpcUrl);
       const contractVPassSBT = await initCotractVizingPassSBT(vizingProvider);
       const isUserMint = await contractVPassSBT.getIfAlreadyMint(userAddress);
       setIsUserMint(isUserMint);
       setIsUserMintLoading(false);
-    } catch (error) {
-      console.error("Get mint info error", error);
+      if (typeof accountLoginInfo.vPassHash === "string" && !isUserMint) {
+        // mint request is pending
+        setIsUserMintPending(true);
+        if (!congratsIntervalRef.current) {
+          congratsIntervalRef.current = setInterval(() => {
+            intervalCheckUserMintInfo();
+          }, 15000);
+        }
+      }
+      setAccountTravelInfo(accountLoginInfo);
+      const inviteLink = `${currentEnvExternalUrls.homepage}/boundless-travel?inviteCode=${accountLoginInfo.code}`;
+      setInviteLink(inviteLink);
     }
-  }, [account.address, initCotractVizingPassSBT, vizingConfig]);
+  }, [
+    vizingConfig,
+    account.address,
+    setAccountTravelInfo,
+    currentEnvExternalUrls,
+    intervalCheckUserMintInfo,
+    initCotractVizingPassSBT,
+  ]);
 
   const initChainList = useCallback(async () => {
     const currentEnvChainList = getCurrentEnvChainConfig();
@@ -162,7 +200,7 @@ export default function VPass() {
       <div className="relative h-[378px] w-[618px] p-[44px] bg-[#232021] rounded-[24px] overflow-hidden">
         <SvgDialogBgPattern className="absolute z-1 top-[-500px] left-[-500px]" />
         <div className="relative z-2">
-          <div className="flex flex-col mb-[70px] text-[36px] font-[500] text-center leading-[44px] text-center">
+          <div className="flex flex-col mb-[70px] text-[36px] font-[500] text-center leading-[44px]">
             <p>Congratulations on</p>
             <p>successfully sharing your</p>
             <p>invitation code!</p>
@@ -170,7 +208,6 @@ export default function VPass() {
           <div
             onClick={() => {
               hideDialog();
-              initUserMintInfo();
             }}
             className="flex justify-center items-center h-[56px] mb-[20px] rounded-[12px] text-[20px] text-white font-[700] bg-[#FF486D] hover:cursor-pointer"
           >
@@ -179,29 +216,32 @@ export default function VPass() {
         </div>
       </div>
     );
-  }, [hideDialog, initUserMintInfo]);
+  }, [hideDialog]);
 
   // const currentChainGasPrice = useGasPrice();
   const renderDialogLevel1Content = useCallback(() => {
     const handleDialogShareClick = () => {
       hideDialog();
-      showDialog(renderDialogLevel2Content());
+      showDialog({
+        content: renderDialogLevel2Content(),
+        isShowClose: true,
+      });
       const twitterLink = currentEnvExternalUrls.twitter;
       window.open(twitterLink);
     };
 
     return (
-      <div className="relative h-[378px] w-[618px] p-[44px] bg-[#232021] rounded-[24px] overflow-hidden">
+      <div className="relative flex items-center justify-center w-[618px] p-[44px] bg-[#232021] rounded-[24px] overflow-hidden">
         <SvgDialogBgPattern className="absolute z-1 top-[-500px] left-[-500px]" />
         <div className="relative z-2">
-          <div className="flex flex-col mb-[70px] text-[36px] font-[500] text-center leading-[44px] text-center">
+          <div className="flex flex-col text-[36px] mt-[42px] mb-[42px] font-[500] leading-[44px] text-center">
             <p>Congratulations on</p>
             <p>obtaining your V Pass!</p>
           </div>
-          <div
+          {/* hide button temporary */}
+          {/* <div
             onClick={() => {
               hideDialog();
-              initUserMintInfo();
             }}
             className="flex justify-center items-center h-[56px] mb-[20px] rounded-[12px] text-[20px] text-black font-[700] bg-white hover:cursor-pointer"
           >
@@ -212,11 +252,11 @@ export default function VPass() {
             className="flex justify-center items-center h-[56px] mb-[20px] rounded-[12px] text-[20px] text-white font-[700] bg-[#FF486D] hover:cursor-pointer"
           >
             Share to earn minting fee rewards! &gt;
-          </div>
+          </div> */}
         </div>
       </div>
     );
-  }, [hideDialog, currentEnvExternalUrls, showDialog, renderDialogLevel2Content, initUserMintInfo]);
+  }, [hideDialog, currentEnvExternalUrls, showDialog, renderDialogLevel2Content]);
 
   const checkIsUserBalanceEnough = useCallback(
     async (userAddress: string, mintPrice: bigint, fee: bigint = BigInt(0)) => {
@@ -242,6 +282,59 @@ export default function VPass() {
     [currentEnvChainConfig, walletChainId],
   );
 
+  // const getCurrentEnvChainBalance = useCallback(async () => {
+  //   const userAddress = account.address;
+  //   if (userAddress) {
+  //     const currentEnvChainList = getCurrentEnvChainConfig();
+
+  //     const chainListWithBalance = await Promise.all(
+  //       currentEnvChainList.map(async (chain) => {
+  //         const provider = new JsonRpcProvider(chain.rpcUrl);
+  //         const balance = await provider.getBalance(userAddress);
+  //         return {
+  //           ...chain,
+  //           balance,
+  //         };
+  //       }),
+  //     );
+  //     setChainList(chainListWithBalance);
+  //     setIsChainListLoading(false);
+  //   }
+  // }, [account.address]);
+
+  const handleMintSuccess = useCallback(
+    async (transactionHash: string, chainId: string, chainName: string) => {
+      const userAddress = account.address;
+      if (!userAddress) {
+        return;
+      }
+
+      const transactionHashParam = `${walletChainId}-${transactionHash}`;
+      const bindRes = await bindAcccountAndVPass({
+        account: userAddress,
+        transactionHash: transactionHashParam,
+      });
+      if (bindRes.success) {
+        setIsUserMintPending(true);
+        if (!congratsIntervalRef.current) {
+          congratsIntervalRef.current = setInterval(() => {
+            intervalCheckUserMintInfo();
+          }, 15000);
+        }
+        sendGoogleEvent({
+          event: "Mint V Pass",
+          value: {
+            chainName,
+            chainId,
+          },
+        });
+      } else {
+        toast.error("Network error, mint VPass failed.");
+      }
+    },
+    [account.address, intervalCheckUserMintInfo, walletChainId, sendGoogleEvent],
+  );
+
   const crossChainMint = useCallback(
     async (signature: string) => {
       try {
@@ -255,7 +348,6 @@ export default function VPass() {
           preMintInfo.invitedCode === encodeEmptyInvitedCode
             ? ethers.parseEther("0.001")
             : ethers.parseEther("0.0008");
-        console.log("find chain config", walletChainId);
         const currentChainConfig = currentEnvChainConfig.find((chain) => {
           return chain.id === walletChainId;
         });
@@ -319,10 +411,9 @@ export default function VPass() {
           return;
         }
         const getTotalETHAmount = getOmniMessageFee + mintPrice;
-        const currentTimestamp = Math.floor(Date.now() / 1000);
         const crossMintResult = await contractLauchPad.Launch(
-          BigInt(currentTimestamp + 200),
-          BigInt(currentTimestamp + 60000),
+          0,
+          0,
           ZeroAddress,
           account.address,
           mintPrice,
@@ -331,9 +422,18 @@ export default function VPass() {
           getEncodeData,
           { value: getTotalETHAmount },
         );
-        showDialog(renderDialogLevel1Content());
+        const crossMintTx = await crossMintResult.wait();
+        if (crossMintTx.status === TxStatus.SUCCESS) {
+          handleMintSuccess(
+            crossMintResult.hash,
+            `${currentChainConfig.id}`,
+            currentChainConfig.name,
+          );
+        } else {
+          toast.error("NFT minting failed. Please try again later.");
+          setIsMinting(false);
+        }
         // TODO: show status toast after crossMint
-        setIsMinting(false);
       } catch (error) {
         console.error("cross chain mint error", error);
         setIsMinting(false);
@@ -343,12 +443,11 @@ export default function VPass() {
       account.address,
       currentEnvChainConfig,
       initCotractVizingPassSBT,
-      showDialog,
       signer,
-      renderDialogLevel1Content,
       vizingConfig,
       walletChainId,
       checkIsUserBalanceEnough,
+      handleMintSuccess,
     ],
   );
 
@@ -357,17 +456,17 @@ export default function VPass() {
     if (!userAddress || !signer) {
       return;
     }
-    const preMintInfo = await getPreMintInfo({ account: userAddress });
-    const contractVPassSBT = await initCotractVizingPassSBT(signer);
-    const invitedCode = accountTravelInfo?.invitedCode || emptyInvitedCode;
-    const inviterAddress = preMintInfo.invitedAccount;
-    const mintPrice =
-      invitedCode === emptyInvitedCode ? ethers.parseEther("0.001") : ethers.parseEther("0.0008");
-    const isUserBalanceEnough = await checkIsUserBalanceEnough(userAddress, mintPrice);
-    if (!isUserBalanceEnough) {
-      return;
-    }
     try {
+      const preMintInfo = await getPreMintInfo({ account: userAddress });
+      const contractVPassSBT = await initCotractVizingPassSBT(signer);
+      const invitedCode = accountTravelInfo?.invitedCode || emptyInvitedCode;
+      const inviterAddress = preMintInfo.invitedAccount;
+      const mintPrice =
+        invitedCode === emptyInvitedCode ? ethers.parseEther("0.001") : ethers.parseEther("0.0008");
+      const isUserBalanceEnough = await checkIsUserBalanceEnough(userAddress, mintPrice);
+      if (!isUserBalanceEnough) {
+        return;
+      }
       const mintResult = await contractVPassSBT.publicMint(
         preMintInfo.invitedCode,
         preMintInfo.code,
@@ -377,20 +476,19 @@ export default function VPass() {
           value: mintPrice,
         },
       );
-      // TODO: show pending toast
-      showDialog(renderDialogLevel1Content());
+      handleMintSuccess(mintResult.hash, `${vizingConfig.id}`, vizingConfig.name);
     } catch (error) {
+      setIsMinting(false);
       console.error("Mint VPass failed.", error);
     }
-    // setIsMinting(false);
   }, [
     account.address,
     accountTravelInfo,
     initCotractVizingPassSBT,
-    renderDialogLevel1Content,
-    showDialog,
     signer,
     checkIsUserBalanceEnough,
+    handleMintSuccess,
+    vizingConfig,
   ]);
 
   const mintVPassNotOnVizing = useCallback(async () => {
@@ -400,7 +498,6 @@ export default function VPass() {
     }
     try {
       const preMintInfo = await getPreMintInfo({ account: userAddress });
-      console.log("mintVPassNotOnVizing preMintInfo", preMintInfo);
       intervalIdRef.current = setInterval(async () => {
         const signatureRes = await getMintSigature({
           hash: preMintInfo.signHash,
@@ -419,10 +516,8 @@ export default function VPass() {
   const mintVPass = () => {
     try {
       if (account.chainId === vizingConfig.id) {
-        console.log("mint on vizing");
         mintVPassOnVizing();
       } else {
-        console.log("mint not on vizing");
         mintVPassNotOnVizing();
       }
     } catch (error) {
@@ -440,25 +535,11 @@ export default function VPass() {
         toast.info("Please select chain.");
         return;
       }
-      // setIsMinting2(true);
-      console.log("after set isMinting", isMinting);
       if (selectedChain.id !== account.chainId) {
         toast("Switch to the chain you selected.");
-        switchChain(
-          {
-            chainId: selectedChain.id,
-          },
-          // {
-          //   onSuccess: () => {
-          //     console.log("switch chain success");
-          //     mintVPass();
-          //   },
-          //   onError: (switchError) => {
-          //     console.log("switch error", switchError);
-          //     setIsMinting(false);
-          //   },
-          // },
-        );
+        switchChain({
+          chainId: selectedChain.id,
+        });
       } else {
         setIsMinting(true);
         mintVPass();
@@ -468,39 +549,6 @@ export default function VPass() {
       setIsMinting(false);
     }
   };
-
-  // const handleMintVPass = async () => {
-  //   if (isMinting) {
-  //     return;
-  //   }
-  //   if (!selectedChain) {
-  //     toast.info("Please select chain.");
-  //     return;
-  //   }
-  //   setIsMinting(true);
-  //   let fromChainId = walletChainId;
-  //   try {
-  //     if (selectedChain.id !== walletChainId) {
-  //       // wallet chain is not matching, change chain
-  //       // switch chain async
-  //       // const switchResult = await switchChainAsync({
-  //       //   chainId: selectedChain.id,
-  //       // });
-  //       switchChain({
-  //         chainId: selectedChain.id,
-  //       });
-  //       messageTaskRef.current = true;
-  //     } else {
-  //       if (fromChainId === vizingConfig.id) {
-  //         mintVPassOnVizing();
-  //       } else {
-  //         mintVPassNotOnVizing(fromChainId);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     setIsMinting(false);
-  //   }
-  // };
 
   const getUserSBTInfo = useCallback(async () => {
     const userAddress = account.address;
@@ -513,14 +561,36 @@ export default function VPass() {
     return userSBTInfo;
   }, [account, vizingConfig, initCotractVizingPassSBT]);
 
-  const isClaimValid = async () => {
+  const isClaimValid = useCallback(async () => {
     const userSBTInfo = await getUserSBTInfo();
     const totalClaim = userSBTInfo[4];
     const totalReferral = userSBTInfo[3];
     return totalClaim < totalReferral;
-  };
+  }, [getUserSBTInfo]);
 
-  const handleClaim = async () => {
+  const excuteClaimTask = useCallback(async () => {
+    if (!signer) {
+      return;
+    }
+    try {
+      setHasClaimTask(false);
+      const contractVPassSBT = await initCotractVizingPassSBT(signer);
+      const referralResult = await contractVPassSBT.referralMint();
+      const referralTx = await referralResult.wait();
+      if (referralTx.status === TxStatus.SUCCESS) {
+        toast.success(referralResult.hash, {
+          position: "top-right",
+        });
+        refetchReferralResult();
+        setHasClaimTask(false);
+      }
+    } catch (error) {
+      setHasClaimTask(false);
+      console.error("Excute claim failed", error);
+    }
+  }, [initCotractVizingPassSBT, signer, refetchReferralResult]);
+
+  const handleClaim = useCallback(async () => {
     if (!signer) {
       return;
     }
@@ -530,21 +600,54 @@ export default function VPass() {
       toast.info("There is no token left to claim.");
       return;
     }
-    if (walletChainId !== vizingConfig.id) {
-      // wallet chain is not matching, change chain
-      const switchResult = await switchChainAsync({
+    if (account.chainId !== vizingConfig.id) {
+      // await implement
+      // const switchResult = await switchChainAsync({
+      //   chainId: vizingConfig.id,
+      // });
+      // const contractVPassSBT = await initCotractVizingPassSBT(signer);
+      // const referralResult = await contractVPassSBT.referralMint();
+      // console.log("referralResult", referralResult);
+      // toast.success(referralResult.hash, {
+      //   position: "top-right",
+      // });
+      // refetchReferralResult();
+      // then implement
+      // switchChainAsync({
+      //   chainId: vizingConfig.id,
+      // }).then(async (res) => {
+      //   console.log("switchCHainAsync res", res);
+      //   const contractVPassSBT = await initCotractVizingPassSBT(signer);
+      //   const referralResult = await contractVPassSBT.referralMint();
+      //   console.log("referralResult", referralResult);
+      //   toast.success(referralResult.hash, {
+      //     position: "top-right",
+      //   });
+      //   refetchReferralResult();
+      // });
+      switchChain({
         chainId: vizingConfig.id,
       });
-      const contractVPassSBT = await initCotractVizingPassSBT(signer);
-      const referralResult = await contractVPassSBT.referralMint();
-      toast.success("Claim successfully!");
-      refetchReferralResult();
+      setHasClaimTask(true);
     } else {
-      const contractVPassSBT = await initCotractVizingPassSBT(signer);
-      const referralResult = await contractVPassSBT.referralMint();
-      toast.success("Claim successfully!");
-      refetchReferralResult();
+      // const contractVPassSBT = await initCotractVizingPassSBT(signer);
+      // const referralResult = await contractVPassSBT.referralMint();
+      // console.log("referralResult", referralResult);
+      // toast.success(referralResult.hash, {
+      //   position: "top-right",
+      // });
+      // refetchReferralResult();
+      excuteClaimTask();
     }
+  }, [account.chainId, isClaimValid, signer, vizingConfig, switchChain, excuteClaimTask]);
+
+  const handleTweetClick = () => {
+    const tweetContent = `🎉 I’ve joined Vizing’s Boundless Travel event and earned exclusive NFT rewards! Come join me and start earning your rewards now by clicking my invitation link! 🌐%0A${inviteLink}%0A%23Vizing %23NFT %23Crypto`;
+    window.open(`https://twitter.com/intent/tweet?text=${tweetContent}`);
+    sendGoogleEvent({
+      event: "buttonClicked",
+      value: "tw-share",
+    });
   };
 
   const getSBTContractAddressShortcut = () => {
@@ -573,12 +676,54 @@ export default function VPass() {
     window.open(`${explorerUrl}/address/${sbtContractAddress}`);
   };
 
+  const scrollToReferral = () => {
+    const targetElement = document.getElementById("referral_target");
+    if (targetElement) {
+      const offset = 100; // distance between targetElement and screen top
+      const elementPosition = targetElement.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.scrollY - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      });
+    }
+  };
+
   useEffect(() => {
     initUserLoginInfo();
-    initUserMintInfo();
-    initChainList();
     getUserVPassId();
-  }, [initUserLoginInfo, initUserMintInfo, initChainList, getUserVPassId]);
+    initChainList();
+  }, [initUserLoginInfo, getUserVPassId, initChainList]);
+
+  useEffect(() => {
+    if (showCongratsDialog) {
+      setShowCongratsDialog(false);
+      showDialog({
+        content: renderDialogLevel1Content(),
+        isShowClose: true,
+        onClose: () => {
+          scrollToReferral();
+        },
+      });
+    }
+  }, [showCongratsDialog, showDialog, renderDialogLevel1Content]);
+
+  useEffect(() => {
+    // this effect is for cross chain claim
+    // the reason is that cannot get the lastest signer after chain changing
+    if (signer && hasClaimTask && account.chainId === vizingConfig.id) {
+      excuteClaimTask();
+    }
+  }, [signer, hasClaimTask, excuteClaimTask, account.chainId, vizingConfig]);
+
+  useEffect(() => {
+    return () => {
+      if (congratsIntervalRef.current) {
+        clearInterval(congratsIntervalRef.current);
+      }
+    };
+  }, []);
 
   const isInvited =
     accountTravelInfo?.invitedCode && accountTravelInfo?.invitedCode !== emptyInvitedCode;
@@ -586,10 +731,11 @@ export default function VPass() {
   return (
     <div className="w-full text-white">
       <h1 className="mb-[56px] text-white text-[48px] font-medium">V Pass</h1>
-      <div className="flex flex-col p-[44px] border border-[1px] border-[rgba(255,255,255,0.12)] rounded-[24px] bg-[#232021]">
-        <div className="flex justify-start mb-[40px] pl-[106px]">
+      <div className="flex flex-col p-[44px] border border-[rgba(255,255,255,0.12)] rounded-[24px] bg-[#232021] overflow-hidden">
+        <div className="relative flex justify-start mb-[40px] pl-[106px]">
+          <SvgDialogBgPattern className="absolute z-1 top-[-600px] left-[-600px]" />
           <Image
-            className="h-[250px] w-[250px] mr-[97px]"
+            className="relative z-2 h-[250px] w-[250px] mr-[97px]"
             src={ImgPassport}
             alt="boundless-travel-passport"
           />
@@ -645,15 +791,9 @@ export default function VPass() {
                       {isInvited ? `0.0008 ETH` : "0.001 ETH"}
                     </span>
                   </div>
-                  <div
-                    onClick={handleMintVPassClick}
-                    className={clsx(
-                      "relative h-[56px] w-[262px] flex justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-pointer",
-                      isMinting ? styles.isMinting : "",
-                    )}
-                  >
-                    Mint
-                    {isMinting && (
+                  {isUserMintPending ? (
+                    <div className="relative h-[56px] w-[262px] flex justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-not-allowed opacity-30">
+                      Mint
                       <div
                         className={clsx(
                           "absolute top-[50%] translate-y-[-50%] right-[70px] iline-block scale-55",
@@ -661,14 +801,42 @@ export default function VPass() {
                       >
                         <LoadingSpin />
                       </div>
-                    )}
-                    {isInvited && (
-                      <div className="absolute right-[6px] top-[6px] h-[44px] w-[44px] flex flex-col items-center justify-center rounded-[12px] text-[#FF486D] text-[14px] font-[600] bg-white">
-                        <span>20%</span>
-                        <span>OFF</span>
-                      </div>
-                    )}
-                  </div>
+                      {isInvited && (
+                        <div className="absolute right-[6px] top-[6px] h-[44px] w-[44px] flex flex-col items-center justify-center rounded-[12px] text-[#FF486D] text-[14px] font-[600] bg-white">
+                          <span>20%</span>
+                          <span>OFF</span>
+                        </div>
+                      )}
+                      <p className="absolute top-[100%] left-0 text-[12px] leading-[24px] text-[rgba(255,255,255,0.6)] font-[400]">
+                        Minting takes approximately 4 minutes.
+                      </p>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={handleMintVPassClick}
+                      className={clsx(
+                        "relative h-[56px] w-[262px] flex justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-pointer",
+                        isMinting ? styles.isMinting : "",
+                      )}
+                    >
+                      Mint
+                      {isMinting && (
+                        <div
+                          className={clsx(
+                            "absolute top-[50%] translate-y-[-50%] right-[70px] iline-block scale-55",
+                          )}
+                        >
+                          <LoadingSpin />
+                        </div>
+                      )}
+                      {isInvited && (
+                        <div className="absolute right-[6px] top-[6px] h-[44px] w-[44px] flex flex-col items-center justify-center rounded-[12px] text-[#FF486D] text-[14px] font-[600] bg-white">
+                          <span>20%</span>
+                          <span>OFF</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -680,19 +848,22 @@ export default function VPass() {
         </div>
 
         <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
-          Share to Earn：For every successful referral that results in a mint, you will receive a
-          rebate of 0.0004 ETH.
-        </p>
-        <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
           The V Pass is a Omni-chain SBT NFT that records all your travel traces in Vizing. It
           serves as a symbol of your status as an early bird.
         </p>
         <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
           Let&apos;s expand the Vizing ecosystem together by collecting Boundless Travel NFTs!
         </p>
+        <p className="text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
+          Share to Earn：For every successful referral that results in a mint, you will receive a
+          rebate of 0.0004 ETH.
+        </p>
       </div>
-      <h1 className="mt-[88px] mb-[56px] text-white text-[48px] font-medium">Referral NFT</h1>
-      <div className="flex flex-col p-[44px] border border-[1px] border-[rgba(255,255,255,0.12)] rounded-[24px] bg-[#232021]">
+      <h1 id="referral_target" className="mt-[88px] mb-[56px] text-white text-[48px] font-medium">
+        Referral
+      </h1>
+      <div className="relative flex flex-col p-[44px] border border-[rgba(255,255,255,0.12)] rounded-[24px] bg-[#232021] overflow-hidden">
+        <SvgDialogBgPattern className="absolute z-1 top-[-600px] left-[-600px]" />
         <div className="flex mb-[40px]">
           <Image className="h-[166px] w-[178px] mr-[54px]" src={ImgReferral} alt="referral-image" />
           <div className="flex flex-col">
@@ -726,25 +897,30 @@ export default function VPass() {
                 <p className="w-[260px] truncate">{inviteLink}</p>
                 <div
                   onClick={copyInviteLink}
-                  className="h-[56px] w-[56px] flex items-center justify-center rounded-[12px] bg-[#FF486D] hover:cursor-pointer"
+                  className="h-[56px] w-[56px] mr-[10px] flex items-center justify-center rounded-[12px] bg-[#FF486D] hover:cursor-pointer"
                 >
                   <IconCopy className="h-[30px] w-[30px] hover:cursor-pointer" />
                 </div>
+                <div className="h-[56px] w-[56px] flex flex-col items-center justify-center rounded-[12px] text-[#FF486D] text-[14px] font-[600] bg-white">
+                  <span>Earn</span>
+                  <span>50%</span>
+                </div>
               </div>
-              <a href={currentEnvExternalUrls.twitter} target="_blank" rel="noopener noreferrer">
-                <div className="h-[56px] w-[56px] flex items-center justify-center mr-[10px] rounded-[12px] bg-[rgba(255,72,109,0.5)]">
+              <div onClick={handleTweetClick}>
+                <div className="h-[56px] w-[56px] flex items-center justify-center mr-[10px] rounded-[12px] bg-[rgba(255,72,109,0.5)] hover:cursor-pointer hover:bg-[rgb(242,63,93)] duration-200">
                   <IconTwitterWhite className="h-[23px] w-[27px]" />
                 </div>
-              </a>
+              </div>
             </div>
           </div>
         </div>
-        <p className="mb-[24px] text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
+        <p className="text-[14px] text-[rgba(255,255,255,0.6)] font-[400] leading-[20px]">
           Share your invite code or Twitter post with your friends. Once your friend successfully
           mints a V Pass, it will be considered a successful referral. As the referrer, you will
-          receive 50% profit sharing(0.0005E) and a Referral Token.
+          receive 50% profit sharing(0.0004E) and a Referral Token.
         </p>
       </div>
+      {/* The following: Activity list hidde temporary */}
       {/* <div className="flex flex-wrap justify-between mt-[20px]">
         {activityList.map((protocolActivity) => {
           return (
