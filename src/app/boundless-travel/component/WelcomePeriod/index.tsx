@@ -4,6 +4,7 @@ import { clsx } from "clsx";
 import styles from "./style.module.css";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import VerificationInput from "react-verification-input";
+import { Slide, Zoom, Flip, Bounce } from "react-toastify";
 import { useSearchParams } from "next/navigation";
 import { useConnect, useConnectors } from "wagmi";
 import { useChains } from "wagmi";
@@ -139,6 +140,10 @@ export default function WelcomePeriod() {
   };
 
   const enterTravelActivity = async () => {
+    // toast.success("Success Notification !", {
+    //   position: "top-center",
+    //   transition: Slide,
+    // });
     if (!inputInviteCode) {
       setCombindedTravelInfo({
         ...combindedTravelInfo,
@@ -157,6 +162,10 @@ export default function WelcomePeriod() {
             setCombindedTravelInfo({
               ...combindedTravelInfo,
               isWelcomeViewed: true,
+            });
+            toast.success("Welcome!", {
+              position: "top-center",
+              transition: Slide,
             });
           }
         } catch (error) {
