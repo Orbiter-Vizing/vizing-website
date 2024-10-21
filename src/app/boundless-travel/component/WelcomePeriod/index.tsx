@@ -3,21 +3,17 @@
 import { clsx } from "clsx";
 import styles from "./style.module.css";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import AuthCode from "react-auth-code-input";
-import { useRouter } from "next/navigation";
+import VerificationInput from "react-verification-input";
+import { useSearchParams } from "next/navigation";
 import { useConnect, useConnectors } from "wagmi";
-import { injected } from "wagmi/connectors";
 import { useChains } from "wagmi";
 import { toast } from "react-toastify";
 import { useAccount } from "wagmi";
-import { externalURLs } from "@/utils/constant";
 import { getBoundlessTravelSetting } from "@/api/boundlessTravel";
 // atom
 import { useAtom } from "jotai";
 import {
   accountTravelInfoAtom,
-  accountAddressAtom,
-  beInvitedAtom,
   combinedTravelInfoAtom,
   travelSettingsAtom,
   emptyInvitedCode,
@@ -29,7 +25,6 @@ import IconWalletconnect from "@/assets/images/wallets/walletconnect.svg";
 import IconMetamask from "@/assets/images/wallets/metamask.svg";
 import IconOkxWallet from "@/assets/images/wallets/okx.svg";
 import IconTwitter from "@/assets/images/social-media/twitter.svg";
-import IconDiscord from "@/assets/images/social-media/discord.svg";
 import IconTelegram from "@/assets/images/social-media/telegram.svg";
 import { useEnv } from "@/providers/envConfigProvider";
 
@@ -45,28 +40,27 @@ enum WelcomeTabIndex {
   INVITECODE = 3,
 }
 
+const inviteCodeQueryName = "inviteCode";
+
 export default function WelcomePeriod() {
   const account = useAccount();
-  const router = useRouter();
   const envConfig = useEnv();
+  const searchParams = useSearchParams();
+  const inviteCodeParam = searchParams.get(inviteCodeQueryName);
 
   const [currentTabIndex, setCurrentTabIndex] = useState(1);
-  const [inputAuthCode, setInputAuthCode] = useState<string>();
+  const [inputInviteCode, setInputInviteCode] = useState<string>("");
   const [accountTravelInfo, setAccountTravelInfo] = useAtom(accountTravelInfoAtom);
-  const [isInvited, setIsInvited] = useAtom(beInvitedAtom);
-  const [accountAddress] = useAtom(accountAddressAtom);
   const [travelSettings, setTravelSettings] = useAtom(travelSettingsAtom);
   const [combindedTravelInfo, setCombindedTravelInfo] = useAtom(combinedTravelInfoAtom);
   const [isUserConnected, setIsUserConnected] = useState(false);
-
-  // const { isPending, isFetching, isLoading, data, refetch } = useAccountTravelInfo(account.address);
 
   const { connect } = useConnect();
   const connectors = useConnectors();
   const chains = useChains();
 
-  const handleOnChange = (res: string) => {
-    setInputAuthCode(res);
+  const inviteCodeOnChange = (res: string) => {
+    setInputInviteCode(res);
   };
 
   const tabsArray = useMemo(() => {
@@ -145,20 +139,19 @@ export default function WelcomePeriod() {
   };
 
   const enterTravelActivity = async () => {
-    if (!inputAuthCode) {
+    if (!inputInviteCode) {
       setCombindedTravelInfo({
         ...combindedTravelInfo,
         isWelcomeViewed: true,
       });
     } else {
       // check if the code is valid
-      // console.log("authCode", authCode);
       const address = account.address;
-      if (address && inputAuthCode) {
+      if (address && inputInviteCode) {
         try {
           const res = await checkIsInviteCodeValid({
             account: address,
-            invitedCode: inputAuthCode,
+            invitedCode: inputInviteCode,
           });
           if (res.success) {
             setCombindedTravelInfo({
@@ -184,6 +177,19 @@ export default function WelcomePeriod() {
       setTravelSettings(travelSettings);
     }
   }, [account.address, accountTravelInfo, setAccountTravelInfo, setTravelSettings]);
+
+  const handleInviteCodefromUrl = useCallback(() => {
+    const validInviteCodeRegex = /^[a-z0-9]{6}$/;
+    if (inviteCodeParam && validInviteCodeRegex.test(inviteCodeParam)) {
+      console.log("code valid", inviteCodeParam);
+      setInputInviteCode(inviteCodeParam);
+    }
+  }, [inviteCodeParam]);
+
+  const enterInviteCodePeriod = () => {
+    handlePeriodChange(WelcomeTabIndex.INVITECODE);
+    handleInviteCodefromUrl();
+  };
 
   useEffect(() => {
     initUserLoginInfo();
@@ -291,7 +297,7 @@ export default function WelcomePeriod() {
                 Previous
               </div>
               <div
-                onClick={() => handlePeriodChange(WelcomeTabIndex.INVITECODE)}
+                onClick={enterInviteCodePeriod}
                 className="h-[56px] flex items-center justify-center bg-[#FF486D] text-white rounded-[12px] text-[20px] font-bold hover:cursor-pointer w-1/2"
               >
                 Next
@@ -301,11 +307,19 @@ export default function WelcomePeriod() {
         )}
         {currentTabIndex === WelcomeTabIndex.INVITECODE && (
           <div>
-            <div className="w-full bg-[#302D2E] mb-[20px] rounded-[12px] flex items-center justify-center text-[30px]">
-              <AuthCode
-                containerClassName={styles.authCodeContainer}
-                inputClassName={styles.authCodeInput}
-                onChange={handleOnChange}
+            <div className="w-full mt-[54px] mb-[82px] rounded-[12px] flex items-center justify-center text-[30px]">
+              <VerificationInput
+                value={inputInviteCode}
+                onChange={inviteCodeOnChange}
+                length={6}
+                placeholder={""}
+                classNames={{
+                  container: styles.inviteCodeContainer,
+                  character: styles.inviteCodeCharacter,
+                  characterInactive: styles.inviteCodeCharacter,
+                  characterSelected: styles.inviteCodeCharacterSelected,
+                  characterFilled: "character--filled",
+                }}
               />
             </div>
             <div className="w-full flex justify-between">

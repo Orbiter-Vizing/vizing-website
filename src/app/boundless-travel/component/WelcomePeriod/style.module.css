@@ -15,29 +15,52 @@
   color: #ffffff;
 }
 
-.authCodeContainer {
-  margin-top: 54px;
-  margin-bottom: 82px;
-}
-
-.authCodeInput {
+.inviteCodeInput {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   height: 72px;
   width: 69px;
   background: #302D2E;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 12px;
   margin-right: 23px;
-  padding: 21px;
   text-align: center;
   line-height: 72px;
+  font-size: 38px;
+  font-weight: 700;
+  color: #ffffff;
 }
 
-.authCodeInput:last-child {
+.inviteCodeContainer {
+  width: 527px;
+  height: 72px;
+}
+
+.inviteCodeRoot {
+  border: 1px solid red;
+}
+
+.inviteCodeCharacter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  font-size: 38px;
+  font-weight: 700;
+  border-radius: 12px;
+  background: #302D2E;
+  margin-right: 14px;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.inviteCodeCharacter:last-child {
   margin-right: 0;
 }
 
-.authCodeInput:focus {
-  border-color: #ffffff;
+.inviteCodeCharacterSelected {
+  border: 1px solid #ffffff;
   outline: none;
 }
 
