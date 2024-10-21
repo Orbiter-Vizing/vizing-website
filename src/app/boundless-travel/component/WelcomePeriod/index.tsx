@@ -210,7 +210,7 @@ export default function WelcomePeriod() {
 
   return (
     <div className="w-full">
-      <div className="flex justify-center text-[48px] text-white font-semibold mb-[54px] mt-[64px]">
+      <div className="flex justify-center text-[48px] text-white font-semibold mb-[44px] mt-[54px]">
         Welcome to Vizing
       </div>
       <div className="w-[800px] bg-[#232021] rounded-[24px] p-[24px] pb-[32px] mx-auto">
