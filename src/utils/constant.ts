@@ -145,3 +145,8 @@ export const zeroAddress = "0x0000000000000000000000000000000000000000";
 
 export const normalMintFee = "0.001"; // ETH
 export const invitedMintFee = "0.0008"; // ETH
+
+export enum TxStatus {
+  SUCCESS = 1,
+  FAILED = 0,
+}
