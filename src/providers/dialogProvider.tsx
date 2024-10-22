@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useRef, useState } from "react";
 
 // assets
 import IconCloseButton from "@/assets/images/icon/close.svg";
@@ -8,6 +8,7 @@ import IconCloseButton from "@/assets/images/icon/close.svg";
 interface DialogConfig {
   content: React.ReactNode;
   isShowClose: boolean;
+  onClose?: () => void;
 }
 
 interface DialogContextType {
@@ -21,16 +22,22 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isOpen, setIsOpen] = useState(false);
   const [dialogContent, setDialogContent] = useState<React.ReactNode>(null);
   const [isShowClose, setIsShowClose] = useState(false);
+  const closeFuncRef = useRef<() => void>();
 
   const showDialog = useCallback((config: DialogConfig) => {
     setDialogContent(config.content);
     setIsShowClose(config.isShowClose);
+    closeFuncRef.current = config.onClose;
     setIsOpen(true);
   }, []);
 
   const hideDialog = useCallback(() => {
     setIsOpen(false);
     setDialogContent(null);
+    if (closeFuncRef.current) {
+      closeFuncRef.current();
+      closeFuncRef.current = undefined;
+    }
   }, []);
 
   return (
