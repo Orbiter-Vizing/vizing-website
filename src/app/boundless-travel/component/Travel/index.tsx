@@ -79,12 +79,12 @@ export default function BoundlessTravelContent() {
       {/* <WelcomePeriod /> */}
       {/* <TempComponent /> */}
       <div className="relative w-full pl-[272px]">
-        <div className="w-[181px] h-[456px] px-[16px] py-[32px] absolute top-0 left-0">
+        <div className="w-[181px] px-[16px] py-[32px] absolute top-0 left-0 border-[1px] border-[rgba(255,255,255,0.2)] rounded-[16px] bg-[rgba(255,255,255,0.06)]">
           {sidebarList.map((sidebarItem) => {
             return (
               <div
                 className={clsx(
-                  "flex items-center mb-[24px] text-[rgba(255,255,255,0.6)] hover:cursor-pointer",
+                  "flex items-center mb-[24px] text-[rgba(255,255,255,0.6)] hover:cursor-pointer last:mb-[0]",
                   currentSidebarItem === sidebarItem.id ? styles.selectedSidebarItem : "",
                 )}
                 key={sidebarItem.id}
