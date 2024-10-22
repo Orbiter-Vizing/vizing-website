@@ -2,8 +2,16 @@
 
 import React, { createContext, useCallback, useContext, useState } from "react";
 
+// assets
+import IconCloseButton from "@/assets/images/icon/close.svg";
+
+interface DialogConfig {
+  content: React.ReactNode;
+  isShowClose: boolean;
+}
+
 interface DialogContextType {
-  showDialog: (content: React.ReactNode) => void;
+  showDialog: (config: DialogConfig) => void;
   hideDialog: () => void;
 }
 
@@ -12,9 +20,11 @@ const DialogContext = createContext<DialogContextType | undefined>(undefined);
 export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [dialogContent, setDialogContent] = useState<React.ReactNode>(null);
+  const [isShowClose, setIsShowClose] = useState(false);
 
-  const showDialog = useCallback((content: React.ReactNode) => {
-    setDialogContent(content);
+  const showDialog = useCallback((config: DialogConfig) => {
+    setDialogContent(config.content);
+    setIsShowClose(config.isShowClose);
     setIsOpen(true);
   }, []);
 
@@ -27,9 +37,16 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     <DialogContext.Provider value={{ showDialog, hideDialog }}>
       {children}
       {isOpen && (
-        <div className="flex justify-center items-center fixed z-10 inset-0">
-          <div className="absolute z-11 inset-0 bg-black opacity-60"></div>
-          <div className="relative inset-0 z-12">{dialogContent}</div>
+        <div className="fixed z-[10] inset-0 flex justify-center items-center">
+          <div className="absolute z-[11] inset-0 bg-black opacity-60"></div>
+          <div className="relative inset-0 z-[12]">
+            {isShowClose && (
+              <span className="absolute z-[12] top-[30px] right-[30px] inline-block h-[32px] w-[32px] hover:cursor-pointer">
+                <IconCloseButton onClick={hideDialog} className="h-[32px] w-[32px]" />
+              </span>
+            )}
+            {dialogContent}
+          </div>
         </div>
       )}
     </DialogContext.Provider>
