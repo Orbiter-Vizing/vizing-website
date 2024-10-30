@@ -44,7 +44,7 @@ export default function RootLayout({
       <body
         className={clsx(
           inter.className,
-          "min-w-[1280px] max-w-[1440px] mx-auto px-[80px] bg-black",
+          "lg:min-w-[1280px] lg:max-w-[1440px] lg:mx-auto lg:px-[80px] bg-black",
         )}
       >
         <Providers>

@@ -45,6 +45,7 @@ interface HeaderItem {
   jumpLink: string;
   isCurrentSite?: boolean;
   children?: Omit<HeaderItem, "id">[];
+  isHideOnMobile?: boolean;
 }
 
 function openLink(url: string | undefined, currentSitePath?: string) {
@@ -61,6 +62,7 @@ const Header = ({ lang }: ConLangParams) => {
   const [t, setT] = useState<Function | null>(null);
   const [addressShortcut, setAddressShortcut] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const handleScanClick = () => {
     if (!account.address) {
@@ -116,19 +118,20 @@ const Header = ({ lang }: ConLangParams) => {
 
   const headerItemArray: HeaderItem[] = useMemo(() => {
     return [
-      {
-        id: HeaderItemKey.HOME,
-        type: HeaderItemType.INTERNALLINK,
-        text: "Home",
-        jumpLink: "/",
-        isCurrentSite: true,
-      },
+      // {
+      //   id: HeaderItemKey.HOME,
+      //   type: HeaderItemType.INTERNALLINK,
+      //   text: "Home",
+      //   jumpLink: "/",
+      //   isCurrentSite: true,
+      // },
       {
         id: HeaderItemKey.BOUNDLESSTRAVEL,
         type: HeaderItemType.INTERNALLINK,
         text: "Boundless Travel",
         jumpLink: "/boundless-travel",
         isCurrentSite: true,
+        isHideOnMobile: true,
       },
       {
         id: HeaderItemKey.BRIDGE,
@@ -255,12 +258,26 @@ const Header = ({ lang }: ConLangParams) => {
     setIsConnected(account.isConnected);
   }, [account.isConnected]);
 
+  useEffect(() => {
+    const windowWidth = window.innerWidth;
+    const mobileWindowWidth = 640;
+    if (windowWidth <= mobileWindowWidth) {
+      setIsMobile(true);
+    }
+  }, []);
+
   return (
-    <header className="relative h-20 flex items-center justify-center z-[1]">
-      <Logo className="absolute left-0 top-1/2 translate-y-[-50%] h-10 w-auto cursor-pointer" />
-      <ul className="w-fit justify-center text-[16px] gap-[24px] font-[400] text-[#fff]/80 lg:flex flex flex-row items-center">
+    <header className="relative h-20 flex flex-col sm:flex-row items-center justify-center z-[1]">
+      <div className="sm:absolute left-0 sm:top-1/2 sm:translate-y-[-50%] h-10 w-full sm:w-auto cursor-pointer">
+        <Link href={"/"}>
+          <Logo className="h-10 w-auto" />
+        </Link>
+      </div>
+      <ul className="w-full flex flex-row items-center justify-center text-[16px] gap-[24px] font-[400] text-[#fff]/80">
         {headerItemArray.map((item, index) => {
-          return (
+          return isMobile && item.isHideOnMobile ? (
+            ""
+          ) : (
             <li
               key={index}
               className={cn(
@@ -273,7 +290,7 @@ const Header = ({ lang }: ConLangParams) => {
           );
         })}
       </ul>
-      <div className="absolute right-0 top-1/2 translate-y-[-50%]">
+      <div className="hidden sm:block absolute right-0 top-1/2 translate-y-[-50%]">
         {isConnected && (
           <PopoverComponent
             trigger={accountTriggerButton()}
