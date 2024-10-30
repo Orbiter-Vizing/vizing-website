@@ -256,9 +256,9 @@ const Header = ({ lang }: ConLangParams) => {
   }, [account.isConnected]);
 
   return (
-    <header className="relative h-20 flex items-center justify-center relative z-[1]">
+    <header className="relative h-20 flex items-center justify-center z-[1]">
       <Logo className="absolute left-0 top-1/2 translate-y-[-50%] h-10 w-auto cursor-pointer" />
-      <ul className="w-fit flex items-center justify-center text-[16px] gap-[24px] font-[400] text-[#fff]/80 lg:flex flex flex-row items-center">
+      <ul className="w-fit justify-center text-[16px] gap-[24px] font-[400] text-[#fff]/80 lg:flex flex flex-row items-center">
         {headerItemArray.map((item, index) => {
           return (
             <li
@@ -279,19 +279,22 @@ const Header = ({ lang }: ConLangParams) => {
             trigger={accountTriggerButton()}
             align="start"
             sideOffset={20}
-            alignOffset={-156}
+            alignOffset={-112}
           >
-            <div className="w-[380px] h-[230px] p-[24px]">
-              <div className="flex items-center mb-[20px]">
+            <div className="p-[24px]">
+              <div className="flex items-center">
                 <div className="w-[44px] h-[44px] bg-white rounded-full mr-[16px]">
                   {account.address && (
                     <Jazzicon diameter={44} seed={jsNumberForAddress(account.address)} />
                   )}
                 </div>
-                <div className="flex flex-col text-white flex-1">
+                <div className="flex flex-col text-white flex-1 mr-[14px]">
+                  <div className="text-[16px] font-[500]">{addressShortcut}</div>
+                </div>
+                {/* <div className="flex flex-col text-white flex-1">
                   <div className="text-[16px] font-[500] mb-[8px]">{addressShortcut}</div>
                   <div className="text-[14px] font-[400]">V Pass</div>
-                </div>
+                </div> */}
                 <div className="flex">
                   <IconLink
                     onClick={handleScanClick}
@@ -303,7 +306,7 @@ const Header = ({ lang }: ConLangParams) => {
                   />
                 </div>
               </div>
-              <div className="w-full h-[112px] bg-[#302D2E] p-[16px] flex flex-col justify-between rounded-[12px]">
+              {/* <div className="w-full h-[112px] bg-[#302D2E] p-[16px] flex flex-col justify-between rounded-[12px]">
                 <div className="text-white text-[14(px] font-[500] opacity-60 rounded-md">
                   {combindedTravelInfo.travelInfo?.tickets}/
                   {combindedTravelInfo.travelSettings?.totalTickets} Tickets
@@ -317,7 +320,7 @@ const Header = ({ lang }: ConLangParams) => {
                     style={{ width: getTicketsProgress() }}
                   ></div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </PopoverComponent>
         )}
