@@ -15,6 +15,7 @@ import { WagmiProvider } from "wagmi";
 import { config } from "../config/config";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Providers from "@/app/providers";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 // atom
 import { Provider } from "jotai";
@@ -71,6 +72,7 @@ export default function RootLayout({
             </EnvProvider>
           </Provider>
         </Providers>
+        <GoogleAnalytics gaId="G-JT4G9MGL93" />
       </body>
     </html>
   );

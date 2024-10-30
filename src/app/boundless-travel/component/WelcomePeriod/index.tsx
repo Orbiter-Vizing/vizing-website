@@ -28,6 +28,7 @@ import IconOkxWallet from "@/assets/images/wallets/okx.svg";
 import IconTwitter from "@/assets/images/social-media/twitter.svg";
 import IconTelegram from "@/assets/images/social-media/telegram.svg";
 import { useEnv } from "@/providers/envConfigProvider";
+import useGoogleEvent from "@/hooks/i18n/client/useGoogleEvent";
 
 enum WelcomeTabs {
   CONNECTWALLET = "connectWallet",
@@ -42,8 +43,10 @@ enum WelcomeTabIndex {
 }
 
 const inviteCodeQueryName = "inviteCode";
+const inviteCodeLength = 6;
 
 export default function WelcomePeriod() {
+  const { sendGoogleEvent } = useGoogleEvent();
   const account = useAccount();
   const envConfig = useEnv();
   const searchParams = useSearchParams();
@@ -62,6 +65,12 @@ export default function WelcomePeriod() {
 
   const inviteCodeOnChange = (res: string) => {
     setInputInviteCode(res);
+    if (res.length === inviteCodeLength) {
+      sendGoogleEvent({
+        event: "buttonClicked",
+        value: "invite enter",
+      });
+    }
   };
 
   const tabsArray = useMemo(() => {
@@ -132,10 +141,18 @@ export default function WelcomePeriod() {
   };
 
   const handleClickXlink = () => {
+    sendGoogleEvent({
+      event: "buttonClicked",
+      value: "intro tw",
+    });
     window.open(envConfig.currentEnvExternalUrls.twitter);
   };
 
   const handleClickCommunitylink = () => {
+    sendGoogleEvent({
+      event: "buttonClicked",
+      value: "intro tg",
+    });
     window.open(envConfig.currentEnvExternalUrls.telegram);
   };
 
@@ -149,6 +166,17 @@ export default function WelcomePeriod() {
         ...combindedTravelInfo,
         isWelcomeViewed: true,
       });
+      if (accountTravelInfo?.invitedCode !== emptyInvitedCode) {
+        sendGoogleEvent({
+          event: "buttonClicked",
+          value: "dive into vizing - with invite code",
+        });
+      } else {
+        sendGoogleEvent({
+          event: "buttonClicked",
+          value: "dive into vizing - without invite code",
+        });
+      }
     } else {
       // check if the code is valid
       const address = account.address;
@@ -166,6 +194,10 @@ export default function WelcomePeriod() {
             toast.success("Welcome!", {
               position: "top-center",
               transition: Slide,
+            });
+            sendGoogleEvent({
+              event: "buttonClicked",
+              value: "dive into vizing - with invite code",
             });
           }
         } catch (error) {
@@ -267,7 +299,7 @@ export default function WelcomePeriod() {
             <div
               onClick={() => handlePeriod1Click(WelcomeTabIndex.CONNECTSOCIAL)}
               className={clsx(
-                "w-full h-[56px] flex items-center justify-center w-full bg-[#FF486D] text-white rounded-[12px] text-[20px] font-bold hover:cursor-pointer",
+                "w-full h-[56px] flex items-center justify-center bg-[#FF486D] text-white rounded-[12px] text-[20px] font-bold hover:cursor-pointer",
                 // !account.isConnected ? styles.disableButton : "",
                 isUserConnected ? "" : styles.disableButton,
               )}
