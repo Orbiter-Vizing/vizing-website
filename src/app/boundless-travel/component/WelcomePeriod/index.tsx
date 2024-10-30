@@ -52,7 +52,9 @@ export default function WelcomePeriod() {
   const searchParams = useSearchParams();
   const inviteCodeParam = searchParams.get(inviteCodeQueryName);
 
-  const [currentTabIndex, setCurrentTabIndex] = useState(1);
+  const [currentTabIndex, setCurrentTabIndex] = useState<WelcomeTabIndex>(
+    WelcomeTabIndex.CONNECTWALLET,
+  );
   const [inputInviteCode, setInputInviteCode] = useState<string>("");
   const [accountTravelInfo, setAccountTravelInfo] = useAtom(accountTravelInfoAtom);
   const [travelSettings, setTravelSettings] = useAtom(travelSettingsAtom);
@@ -99,11 +101,11 @@ export default function WelcomePeriod() {
     ];
   }, []);
 
-  const handlePeriodChange = (tab: number) => {
+  const handlePeriodChange = (tab: WelcomeTabIndex) => {
     setCurrentTabIndex(tab);
   };
 
-  const handlePeriod1Click = (tab: number) => {
+  const handlePeriod1Click = (tab: WelcomeTabIndex) => {
     if (account.isConnected && accountTravelInfo?.invitedCode !== emptyInvitedCode) {
       enterTravelActivity();
     } else {
@@ -209,7 +211,7 @@ export default function WelcomePeriod() {
   };
 
   const initUserLoginInfo = useCallback(async () => {
-    if (!accountTravelInfo && account.address) {
+    if (account.address) {
       const accountLoginInfo = await requestUserLoginInfo({
         account: account.address,
       });
@@ -217,7 +219,7 @@ export default function WelcomePeriod() {
       setAccountTravelInfo(accountLoginInfo);
       setTravelSettings(travelSettings);
     }
-  }, [account.address, accountTravelInfo, setAccountTravelInfo, setTravelSettings]);
+  }, [account.address, setAccountTravelInfo, setTravelSettings]);
 
   const handleInviteCodefromUrl = useCallback(() => {
     const validInviteCodeRegex = /^[a-z0-9]{6}$/;
@@ -238,6 +240,9 @@ export default function WelcomePeriod() {
 
   useEffect(() => {
     setIsUserConnected(account.isConnected);
+    if (!account.isConnected) {
+      setCurrentTabIndex(WelcomeTabIndex.CONNECTWALLET);
+    }
   }, [account.isConnected]);
 
   return (
