@@ -792,13 +792,9 @@ export default function VPass() {
                     </span>
                   </div>
                   {isUserMintPending ? (
-                    <div className="relative h-[56px] w-[262px] flex justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-not-allowed opacity-30">
+                    <div className="relative h-[56px] w-[290px] flex gap-2 justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-not-allowed opacity-30">
                       Mint
-                      <div
-                        className={clsx(
-                          "absolute top-[50%] translate-y-[-50%] right-[70px] iline-block scale-55",
-                        )}
-                      >
+                      <div className={clsx("iline-block scale-55")}>
                         <LoadingSpin />
                       </div>
                       {isInvited && (
@@ -815,17 +811,13 @@ export default function VPass() {
                     <div
                       onClick={handleMintVPassClick}
                       className={clsx(
-                        "relative h-[56px] w-[262px] flex justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-pointer",
+                        "relative h-[56px] w-[290px] flex gap-2 justify-center items-center text-[20px] font-[700] text-white bg-[#FF486D] rounded-[12px] hover:cursor-pointer",
                         isMinting ? styles.isMinting : "",
                       )}
                     >
                       Mint
                       {isMinting && (
-                        <div
-                          className={clsx(
-                            "absolute top-[50%] translate-y-[-50%] right-[70px] iline-block scale-55",
-                          )}
-                        >
+                        <div className={clsx("iline-block scale-55")}>
                           <LoadingSpin />
                         </div>
                       )}
