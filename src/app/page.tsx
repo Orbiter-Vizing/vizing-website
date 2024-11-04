@@ -453,8 +453,8 @@ export default function Home() {
             target="_blank"
             onClick={() => {
               sendGoogleEvent({
-                event: "buttonClicked",
-                value: "website-play2earn",
+                event: "website-play2earn",
+                value: "",
               });
             }}
           >
