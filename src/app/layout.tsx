@@ -73,7 +73,8 @@ export default function RootLayout({
           </Provider>
         </Providers>
         {/* <GoogleAnalytics gaId="G-JT4G9MGL93" /> */}
-        <GoogleAnalytics gaId="G-EVYT90MJQL" />
+        {/* <GoogleAnalytics gaId="G-EVYT90MJQL" /> */}
+        <GoogleAnalytics gaId="G-NYQTE69RJE" />
       </body>
     </html>
   );
