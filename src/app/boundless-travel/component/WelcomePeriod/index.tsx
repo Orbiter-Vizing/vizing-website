@@ -69,8 +69,8 @@ export default function WelcomePeriod() {
     setInputInviteCode(res);
     if (res.length === inviteCodeLength) {
       sendGoogleEvent({
-        event: "buttonClicked",
-        value: "invite enter",
+        event: "invite enter",
+        value: "",
       });
     }
   };
@@ -144,16 +144,16 @@ export default function WelcomePeriod() {
 
   const handleClickXlink = () => {
     sendGoogleEvent({
-      event: "buttonClicked",
-      value: "intro tw",
+      event: "intro tw",
+      value: "",
     });
     window.open(envConfig.currentEnvExternalUrls.twitter);
   };
 
   const handleClickCommunitylink = () => {
     sendGoogleEvent({
-      event: "buttonClicked",
-      value: "intro tg",
+      event: "intro tg",
+      value: "",
     });
     window.open(envConfig.currentEnvExternalUrls.telegram);
   };
@@ -170,13 +170,13 @@ export default function WelcomePeriod() {
       });
       if (accountTravelInfo?.invitedCode !== emptyInvitedCode) {
         sendGoogleEvent({
-          event: "buttonClicked",
-          value: "dive into vizing - with invite code",
+          event: "dive into vizing - with invite code",
+          value: "",
         });
       } else {
         sendGoogleEvent({
-          event: "buttonClicked",
-          value: "dive into vizing - without invite code",
+          event: "dive into vizing - without invite code",
+          value: "",
         });
       }
     } else {
@@ -198,8 +198,8 @@ export default function WelcomePeriod() {
               transition: Slide,
             });
             sendGoogleEvent({
-              event: "buttonClicked",
-              value: "dive into vizing - with invite code",
+              event: "dive into vizing - with invite code",
+              value: "",
             });
           }
         } catch (error) {

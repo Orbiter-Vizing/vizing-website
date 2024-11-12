@@ -153,8 +153,8 @@ export default function Home() {
     const url = "https://docs.vizing.com/build-on-vizing/development-environment";
     window.open(url, "_blank");
     sendGoogleEvent({
-      event: "buttonClicked",
-      value: "website-build on vizing",
+      event: "website-build on vizing",
+      value: "",
     });
   };
 
@@ -659,8 +659,8 @@ contract MyOmniChainDApp is VizingOmni {
                   onClick={() => {
                     jumpLink && window.open(jumpLink);
                     sendGoogleEvent({
-                      event: "buttonClicked",
-                      value: gaValue,
+                      event: "gaValue",
+                      value: "",
                     });
                   }}
                 >

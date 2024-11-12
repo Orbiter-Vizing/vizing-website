@@ -107,8 +107,8 @@ export default function VPass() {
       await navigator.clipboard.writeText(inviteLink);
       toast.success("Copy invite link successfully!");
       sendGoogleEvent({
-        event: "buttonClicked",
-        value: "copy-share",
+        event: "copy-share",
+        value: "",
       });
     } catch (err) {
       console.error("copy clipboard failed:", err);
@@ -646,8 +646,8 @@ export default function VPass() {
     const tweetContent = `🎉 I’ve joined Vizing’s Boundless Travel event and earned exclusive NFT rewards! Come join me and start earning your rewards now by clicking my invitation link! 🌐%0A${inviteLink}%0A%23Vizing %23NFT %23Crypto`;
     window.open(`https://twitter.com/intent/tweet?text=${tweetContent}`);
     sendGoogleEvent({
-      event: "buttonClicked",
-      value: "tw-share",
+      event: "tw-share",
+      value: "",
     });
   };
 
