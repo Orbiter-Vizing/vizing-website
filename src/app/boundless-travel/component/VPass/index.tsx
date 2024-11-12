@@ -90,9 +90,10 @@ export default function VPass() {
   const congratsIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const intervalIdRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
+  const vizingPassSBTaddress = getCurrentEnvContract().sbt;
   const { data: referralResult, refetch: refetchReferralResult } = useReadContract({
     abi: vizingPassSBTAbi,
-    address: "0x23f5e5bc8733562129fD5978dCA91485c9F91b8a",
+    address: vizingPassSBTaddress as `0x${string}`,
     functionName: "getUserInfo",
     args: [account.address],
     chainId: (process.env.NEXT_PUBLIC_ENV as EnvMode) === "production" ? 28518 : 28516,
