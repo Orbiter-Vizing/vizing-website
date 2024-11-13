@@ -149,4 +149,4 @@ export enum TxStatus {
 }
 
 export const vizingPassSBTUri =
-  "https://c27d47f68637bd1198e8c7be8ba32a6d.ipfs.4everland.link/ipfs/bafybeigytfcbew4ibzhedob6lfjvqc3wunlrwiepuadymtrvve3xkzmldi";
+  "https://beautiful-jade-ant.myfilebase.com/ipfs/QmTnemEgA2gvhGkkiTgKN96rv1iHWfVDCyxE322kvb8Eyv";
