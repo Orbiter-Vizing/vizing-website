@@ -14,7 +14,7 @@ import {
 } from "wagmi";
 
 import styles from "./style.module.css";
-import { EnvMode, getCurrentEnvExternalUrls, TxStatus } from "@/utils/constant";
+import { EnvMode, getCurrentEnvExternalUrls, TxStatus, vizingPassSBTUri } from "@/utils/constant";
 import { activityList } from "./data";
 import {
   getCurrentEnvChainConfig,
@@ -375,7 +375,8 @@ export default function VPass() {
             preMintInfo.invitedCode,
             preMintInfo.code,
             mintPrice,
-            preMintInfo.metadataUri,
+            // preMintInfo.metadataUri,
+            vizingPassSBTUri,
           ],
         );
         const getEncodeSignData = await ethers.keccak256(encodeData);
@@ -387,7 +388,8 @@ export default function VPass() {
           encodeSignMessage: getEncodeSignData,
           signature: signature,
           mintPrice: mintPrice,
-          tokenMetadataUri: preMintInfo.metadataUri,
+          // tokenMetadataUri: preMintInfo.metadataUri,
+          tokenMetadataUri: vizingPassSBTUri,
         };
         const getEncodeData = await contractVPassSBT.getEncodeData(
           crossMessage,
@@ -472,7 +474,8 @@ export default function VPass() {
         preMintInfo.invitedCode,
         preMintInfo.code,
         inviterAddress,
-        preMintInfo.metadataUri,
+        // preMintInfo.metadataUri,
+        vizingPassSBTUri,
         {
           value: mintPrice,
         },

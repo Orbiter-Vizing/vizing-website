@@ -147,3 +147,6 @@ export enum TxStatus {
   SUCCESS = 1,
   FAILED = 0,
 }
+
+export const vizingPassSBTUri =
+  "https://c27d47f68637bd1198e8c7be8ba32a6d.ipfs.4everland.link/ipfs/bafybeigytfcbew4ibzhedob6lfjvqc3wunlrwiepuadymtrvve3xkzmldi";
