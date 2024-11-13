@@ -394,8 +394,8 @@ export default function VPass() {
             preMintInfo.invitedCode,
             preMintInfo.code,
             mintPrice,
-            // preMintInfo.metadataUri,
-            vizingPassSBTUri,
+            preMintInfo.metadataUri,
+            // vizingPassSBTUri,
           ],
         );
         const getEncodeSignData = await ethers.keccak256(encodeData);
@@ -407,8 +407,8 @@ export default function VPass() {
           encodeSignMessage: getEncodeSignData,
           signature: signature,
           mintPrice: mintPrice,
-          // tokenMetadataUri: preMintInfo.metadataUri,
-          tokenMetadataUri: vizingPassSBTUri,
+          tokenMetadataUri: preMintInfo.metadataUri,
+          // tokenMetadataUri: vizingPassSBTUri,
         };
         const getEncodeData = await contractVPassSBT.getEncodeData(
           crossMessage,
@@ -497,8 +497,8 @@ export default function VPass() {
         preMintInfo.invitedCode,
         preMintInfo.code,
         inviterAddress,
-        // preMintInfo.metadataUri,
-        vizingPassSBTUri,
+        preMintInfo.metadataUri,
+        // vizingPassSBTUri,
         {
           value: mintPrice,
         },
