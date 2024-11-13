@@ -659,7 +659,7 @@ contract MyOmniChainDApp is VizingOmni {
                   onClick={() => {
                     jumpLink && window.open(jumpLink);
                     sendGoogleEvent({
-                      event: "gaValue",
+                      event: gaValue,
                       value: "",
                     });
                   }}
