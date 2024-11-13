@@ -396,8 +396,8 @@ export default function VPass() {
           vizingPassSBTContractAddress,
           // TODO: consider get gasLimit and gasPrice dynamicly
           // by estimateGas and useGasPrice
-          BigInt(420000),
-          1_480_000_000,
+          BigInt(450000),
+          1_500_000_000,
         );
         const getOmniMessageFee = await contractLauchPad["estimateGas(uint256,uint64,bytes,bytes)"](
           mintPrice,
