@@ -336,9 +336,28 @@ export default function VPass() {
     [account.address, intervalCheckUserMintInfo, walletChainId, sendGoogleEvent],
   );
 
+  const isSignatureValid = useCallback(
+    async (signature: string, preMintInfoSignHash: string) => {
+      const vizingProvider = new JsonRpcProvider(vizingConfig.rpcUrl);
+      const contractVPassSBT = await initCotractVizingPassSBT(vizingProvider);
+      const signatureVerifyResult = await contractVPassSBT._signatureVerify(
+        preMintInfoSignHash,
+        signature,
+      );
+      console.log("signatureVerifyResult", signatureVerifyResult);
+      return signatureVerifyResult;
+    },
+    [initCotractVizingPassSBT, vizingConfig],
+  );
+
   const crossChainMint = useCallback(
-    async (signature: string) => {
+    async (signature: string, preMintInfoSignHash: string) => {
       try {
+        const checkSignatureRes = await isSignatureValid(signature, preMintInfoSignHash);
+        if (!checkSignatureRes) {
+          toast.error("Signature error.");
+          throw Error("Signature is invalid.");
+        }
         const userAddress = account.address;
         if (!userAddress || !signer) {
           throw Error("Signer or user address is needed.");
@@ -399,12 +418,15 @@ export default function VPass() {
           BigInt(450000),
           1_500_000_000,
         );
+        console.log("before estimateGas");
+        console.log("contractLauchPad", contractLauchPad);
         const getOmniMessageFee = await contractLauchPad["estimateGas(uint256,uint64,bytes,bytes)"](
           mintPrice,
           vizingConfig.id,
           "0x",
           getEncodeData,
         );
+        console.log("before checkIsUserBalanceEnough");
         const isUserBalanceEnough = await checkIsUserBalanceEnough(
           userAddress,
           mintPrice,
@@ -451,6 +473,7 @@ export default function VPass() {
       walletChainId,
       checkIsUserBalanceEnough,
       handleMintSuccess,
+      isSignatureValid,
     ],
   );
 
@@ -508,7 +531,7 @@ export default function VPass() {
         });
         if (signatureRes.signature) {
           clearInterval(intervalIdRef.current);
-          crossChainMint(signatureRes.signature);
+          crossChainMint(signatureRes.signature, preMintInfo.signHash);
         }
       }, 1000);
     } catch (error) {
