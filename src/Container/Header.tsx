@@ -76,7 +76,6 @@ const Header = ({ lang }: ConLangParams) => {
       travelInfo: null,
       isWelcomeViewed: false,
     });
-    console.log("handleLogoutClick");
     disconnect();
   };
 

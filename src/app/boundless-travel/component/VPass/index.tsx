@@ -344,7 +344,6 @@ export default function VPass() {
         preMintInfoSignHash,
         signature,
       );
-      console.log("signatureVerifyResult", signatureVerifyResult);
       return signatureVerifyResult;
     },
     [initCotractVizingPassSBT, vizingConfig],
@@ -418,15 +417,12 @@ export default function VPass() {
           BigInt(450000),
           1_500_000_000,
         );
-        console.log("before estimateGas");
-        console.log("contractLauchPad", contractLauchPad);
         const getOmniMessageFee = await contractLauchPad["estimateGas(uint256,uint64,bytes,bytes)"](
           mintPrice,
           vizingConfig.id,
           "0x",
           getEncodeData,
         );
-        console.log("before checkIsUserBalanceEnough");
         const isUserBalanceEnough = await checkIsUserBalanceEnough(
           userAddress,
           mintPrice,

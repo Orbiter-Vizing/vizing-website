@@ -31,6 +31,5 @@ export const encodeEmptyInvitedCode = "0x303030303030";
 
 export const beInvitedAtom = atom((get) => {
   const invitedCode = get(accountTravelInfoAtom)?.invitedCode;
-  console.log("get inviteCode atom", invitedCode && invitedCode !== emptyInvitedCode);
   return invitedCode && invitedCode !== emptyInvitedCode;
 });

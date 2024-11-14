@@ -224,7 +224,6 @@ export default function WelcomePeriod() {
   const handleInviteCodefromUrl = useCallback(() => {
     const validInviteCodeRegex = /^[a-z0-9]{6}$/;
     if (inviteCodeParam && validInviteCodeRegex.test(inviteCodeParam)) {
-      console.log("code valid", inviteCodeParam);
       setInputInviteCode(inviteCodeParam);
     }
   }, [inviteCodeParam]);
